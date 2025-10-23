@@ -1,370 +1,1177 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Трекер Бега</title>
-    <!-- Подключение Tailwind CSS CDN -->
+    <title>Pupka Tracker (HTML)</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Установка шрифта Inter -->
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f9fb;
+        /* Стилі для плавної появи/зникнення */
+        .hidden-item {
+            display: none;
+            opacity: 0;
+            transition: all 0.3s ease-in-out;
         }
-        .main-card {
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        .visible-item {
+            display: block;
+            opacity: 1;
         }
-        .metric-value {
-            line-height: 1;
+        
+        /* Стиль для модального вікна */
+        #reset-modal.hidden-item { display: none; }
+        #reset-modal.visible-item { display: flex; }
+        
+        /* Стиль для повідомлень */
+        #status-alert.hidden-item { 
+            display: none;
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        #status-alert.visible-item { 
+            display: flex;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Запобігання клікам під час блокування */
+        .ui-blocked {
+            opacity: 0.6;
+            pointer-events: none;
         }
     </style>
 </head>
-<body class="min-h-screen p-4 sm:p-8 flex justify-center">
+<body class="bg-gray-50 p-4 sm:p-8 font-sans">
 
-    <div id="app" class="w-full max-w-2xl">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl font-extrabold text-gray-800">🏃 Беговой Трекер</h1>
-            <p id="user-display" class="text-sm text-gray-500 mt-1"></p>
-        </header>
+    <!-- Головний контейнер -->
+    <div class="max-w-4xl mx-auto space-y-8">
+        
+        <!-- Хедер і Статус -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Секція Статусу (StatusDisplay) -->
+            <div class="md:col-span-1">
+                <div class="bg-white p-6 rounded-2xl shadow-xl text-center space-y-4">
+                    <h1 class="text-3xl font-extrabold text-indigo-700">Пупка</h1>
+                    
+                    <!-- Health Display -->
+                    <div id="heart-display" class="flex justify-center mb-4 gap-1">
+                        <!-- Серця будуть вставлені сюди -->
+                    </div>
 
-        <!-- Основная карточка текущего забега -->
-        <div class="main-card bg-white p-6 rounded-3xl mb-8">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">Текущий Забег</h2>
+                    <!-- Character Visualization (Pupka Image) -->
+                    <div id="image-container" class="w-28 h-28 mx-auto mb-4 rounded-full overflow-hidden shadow-xl border-4 border-indigo-200 transition-all duration-300 transform hover:scale-105 cursor-pointer"
+                         role="button"
+                         aria-label="Змінити зображення Пупки">
+                        <img id="pupka-image"
+                             src="image_915fcc.jpg" 
+                             alt="Pupka Character" 
+                             class="w-full h-full object-cover"
+                             onerror="this.onerror=null; this.src='https://placehold.co/112x112/ff9900/ffffff?text=Pupka'; this.className='w-full h-full object-contain p-2';">
+                    </div>
+                    
+                    <!-- Поле вводу зображення (ImageUploader) -->
+                    <div id="image-uploader" class="hidden-item p-4 mt-4 bg-indigo-50 rounded-xl border border-indigo-300 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-semibold text-indigo-800 flex items-center">
+                                <i data-lucide="image" class="w-5 h-5 mr-2"></i> Вставити (Ctrl+V)
+                            </h4>
+                            <button id="close-image-uploader" class="text-gray-500 hover:text-gray-700">
+                                <i data-lucide="x-circle" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Поле для вставки -->
+                        <div id="paste-area"
+                             tabindex="0" 
+                             class="w-full p-4 h-24 border-2 border-dashed rounded-lg text-center cursor-text transition-all duration-200 bg-white border-gray-300 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <p id="paste-prompt" class="text-gray-500 font-medium mt-2">
+                                Натисніть тут і вставте (Ctrl+V)
+                            </p>
+                        </div>
 
-            <!-- Дисплей Таймера -->
-            <div class="text-center mb-6">
-                <span id="timer-display" class="text-7xl sm:text-8xl font-black text-indigo-600 metric-value">00:00:00</span>
-                <p class="text-sm font-medium text-gray-400 mt-1">ВРЕМЯ</p>
+                        <!-- Кнопка скидання -->
+                        <button id="remove-image-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full">
+                            <i data-lucide="trash-2" class="w-5 h-5 mr-2"></i>
+                            Скинути фото Пупки
+                        </button>
+                    </div>
+
+                    <!-- Evolution Level -->
+                    <div class="font-semibold text-lg text-gray-600 pt-4 border-t border-gray-100" id="level-prefix">
+                        Рівень 1
+                    </div>
+                    <h2 class="text-2xl font-bold text-indigo-600 mb-2" id="level-name">...</h2>
+                    <p class="text-sm italic text-gray-500" id="level-description">...</p>
+
+                    <!-- XP Bar -->
+                    <div class="pt-2">
+                        <div class="text-sm font-medium text-gray-700 flex justify-between">
+                            <span id="xp-current-text">XP: 0</span>
+                            <span id="xp-needed-text">До Наст. Рівня: 101</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-4 mt-1">
+                            <div id="xp-progress-bar"
+                                 class="h-4 rounded-full transition-all duration-700 bg-yellow-500"
+                                 style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Метрики -->
-            <div class="grid grid-cols-3 gap-4 text-center">
-                <!-- Дистанция (км) -->
-                <div class="p-3 bg-indigo-50 rounded-xl">
-                    <span id="distance-display" class="text-2xl font-bold text-gray-800 metric-value">0.00</span>
-                    <p class="text-xs text-indigo-500 mt-1 uppercase font-medium">Дистанция (км)</p>
-                </div>
-                <!-- Средний Темп (мин/км) -->
-                <div class="p-3 bg-indigo-50 rounded-xl">
-                    <span id="pace-display" class="text-2xl font-bold text-gray-800 metric-value">--'--</span>
-                    <p class="text-xs text-indigo-500 mt-1 uppercase font-medium">Темп (мин/км)</p>
-                </div>
-                <!-- Калории (ккал) -->
-                <div class="p-3 bg-indigo-50 rounded-xl">
-                    <span id="calories-display" class="text-2xl font-bold text-gray-800 metric-value">0</span>
-                    <p class="text-xs text-indigo-500 mt-1 uppercase font-medium">Калории (ккал)</p>
-                </div>
-            </div>
+            <!-- Секція Додавання XP (XpInputSection) -->
+            <div class="md:col-span-2">
+                <div id="xp-section-content" class="bg-white p-6 rounded-2xl shadow-xl space-y-4">
+                    <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                        <i data-lucide="zap" class="w-6 h-6 mr-2 text-indigo-600"></i> Додати XP за Тренування
+                    </h3>
+                    
+                    <!-- Множник X2 -->
+                    <label class="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-300 cursor-pointer transition-all hover:bg-yellow-100">
+                        <input id="multiplier-checkbox" 
+                               type="checkbox" 
+                               class="form-checkbox h-5 w-5 text-indigo-600 rounded">
+                        <span id="multiplier-label" class="font-semibold text-yellow-800">...</span>
+                    </label>
 
-            <!-- Кнопки управления -->
-            <div class="mt-8 flex justify-center space-x-4">
-                <button id="start-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg shadow-indigo-500/50 transition duration-150 transform hover:scale-105">
-                    Старт
-                </button>
-                <button id="stop-button" disabled class="hidden bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg shadow-red-500/50 transition duration-150 transform hover:scale-105">
-                    Стоп
-                </button>
-                <button id="reset-button" disabled class="hidden bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-3 px-8 rounded-full transition duration-150">
-                    Сброс
-                </button>
+                    <!-- Список активностей -->
+                    <div id="rewards-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-2">
+                        <!-- Активності будуть вставлені сюди -->
+                    </div>
+                    
+                    <!-- Кнопки Дії XP -->
+                    <div class="flex space-x-3 pt-2">
+                        <!-- КНОПКА ВІДМІНИ / КРОК НАЗАД -->
+                        <button id="undo-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i data-lucide="rotate-ccw" class="w-5 h-5 mr-2"></i>
+                            Крок назад
+                        </button>
+                        
+                        <!-- КНОПКА ЗАРАХУВАТИ XP -->
+                        <button id="add-xp-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex-grow">
+                            <i data-lucide="chevrons-up" class="w-5 h-5 mr-2"></i>
+                            Зарахувати XP
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div id="message-box" class="text-center mt-4 text-sm text-red-500 font-medium hidden"></div>
         </div>
 
-        <!-- Секция Истории Забегов -->
-        <div class="bg-white p-6 rounded-3xl main-card">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4 flex justify-between items-center">
-                История Забегов
-                <span id="loading-spinner" class="animate-spin h-5 w-5 border-2 border-indigo-500 border-r-transparent rounded-full hidden"></span>
-            </h2>
-            <div id="history-list" class="space-y-3">
-                <p id="history-placeholder" class="text-gray-500 text-center py-4">История загружается...</p>
+        <!-- Секція Дій та Історія -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Секція Кнопок Дій (ActionButtons) -->
+            <div class="bg-white p-6 rounded-2xl shadow-xl space-y-4">
+                <h3 class="text-xl font-bold text-gray-800">Управління Здоров'ям (❤️)</h3>
+
+                <!-- Здоров'я = 0 (CPR) -->
+                <div id="cpr-section" class="hidden-item p-4 bg-red-100 border border-red-400 rounded-xl text-red-800 font-semibold text-center space-y-3">
+                    <p class="font-bold text-lg">💀 Смерть Пупки!</p>
+                    <p>Потрібно виконати «Штучне дихання»!</p>
+                    <button id="cpr-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed w-full">
+                        <i data-lucide="refresh-cw" class="w-5 h-5 mr-2"></i>
+                        42 км за 2 дні (Відновити 1 ❤️)
+                    </button>
+                    <p class="text-sm text-red-600">Якщо не виконано, Пупка померла назавжди.</p>
+                </div>
+
+                <!-- Кнопки Дії -->
+                <div id="action-buttons-container" class="grid grid-cols-2 gap-3">
+                    <button id="show-heal-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-pink-600 hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="heart" class="w-5 h-5 mr-2"></i>
+                        Лікування (+1 ❤️)
+                    </button>
+                    <button id="show-penalty-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="x-circle" class="w-5 h-5 mr-2"></i>
+                        Штраф (— ❤️/XP)
+                    </button>
+                </div>
+
+                <!-- Панель Лікування -->
+                <div id="heal-options" class="hidden-item p-4 bg-pink-50 rounded-xl border border-pink-300 space-y-2">
+                    <h4 class="font-semibold text-pink-800">Виконані Завдання для Лікування (+1 ❤️):</h4>
+                    <div id="heal-tasks-list">
+                        <!-- Завдання для лікування -->
+                    </div>
+                    <button id="close-heal-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-gray-400 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed w-full mt-2">
+                        Закрити
+                    </button>
+                </div>
+
+                <!-- Панель Штрафів -->
+                <div id="penalty-options" class="hidden-item p-4 bg-gray-50 rounded-xl border border-gray-300 space-y-2">
+                    <h4 class="font-semibold text-gray-800">Застосувати Штраф:</h4>
+                    <div id="penalty-tasks-list">
+                        <!-- Штрафи -->
+                    </div>
+                    <button id="close-penalty-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-gray-400 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed w-full mt-2">
+                        Закрити
+                    </button>
+                </div>
+
+                <!-- Кнопка Скидання/Перестворення -->
+                <div class="pt-4 border-t border-gray-200">
+                    <button id="show-reset-modal-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full">
+                        <i data-lucide="rotate-ccw" class="w-5 h-5 mr-2"></i>
+                        Перестворити персонажа (Скинути все)
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Секція Історії (HistorySection) -->
+            <div class="bg-white p-6 rounded-2xl shadow-xl space-y-4 col-span-1 lg:col-span-2" id="history-section-content">
+                <h3 class="text-xl font-bold text-gray-800">Історія Прогресу (Останні 10)</h3>
+                <div class="max-h-80 overflow-y-auto space-y-2 pr-2" id="history-list">
+                    <p class="text-gray-500 italic">Тут відображатимуться ваші дії.</p>
+                </div>
+                <p class="text-xs text-center text-gray-400">ID Користувача: <span id="user-id-display">...</span> (Для спільного тренування)</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Модальне вікно Скидання (ResetConfirmationModal) -->
+    <div id="reset-modal" class="hidden-item fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4">
+            <h3 class="text-xl font-bold text-red-600">Підтвердження Перестворення</h3>
+            <p class="text-gray-700">Ви впевнені, що хочете перестворити Пупку?</p>
+            <p class="text-sm text-gray-500">Ця дія скине **XP, Здоров'я** та **повністю видалить історію**. Це не можна скасувати.</p>
+            <div class="flex justify-end space-x-3">
+                <button id="cancel-reset-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-gray-500 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Скасувати
+                </button>
+                <button id="confirm-reset-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i data-lucide="rotate-ccw" class="w-5 h-5 mr-2"></i>
+                    <span id="reset-btn-text">Перестворити</span>
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase Imports and Setup -->
+    <!-- Повідомлення про Статус (StatusAlert) -->
+    <div id="status-alert" class="hidden-item fixed bottom-4 right-4 z-50 p-4 rounded-xl shadow-lg border-l-4 font-semibold max-w-xs transition-all duration-300">
+        <span id="status-alert-icon-container">
+            <!-- Іконка буде тут -->
+        </span>
+        <span id="status-alert-text">...</span>
+    </div>
+
+    <!-- Завантажувач (Loader) -->
+    <div id="loader" class="flex items-center justify-center min-h-screen bg-gray-100 fixed inset-0 z-50">
+        <div class="text-indigo-600 text-lg font-semibold flex items-center">
+            <i data-lucide="refresh-cw" class="w-6 h-6 mr-3 animate-spin"></i> Завантаження Пупки...
+        </div>
+    </div>
+
+
+    <!-- JavaScript -->
     <script type="module">
+        // --- FIREBASE ІМПОРТИ ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, runTransaction, serverTimestamp, collection, query, limit, orderBy, getDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // setLogLevel('Debug'); // Раскомментировать для отладки Firestore
+        // --- КОНСТАНТИ ГРИ ---
+        const LEVELS = [
+          { name: 'Пупка (Початкова Молекула)', minXp: 0, maxXp: 100, description: 'Маленька, але жвава істота' },
+          { name: 'Мікроорганізм', minXp: 101, maxXp: 250, description: 'Починає рухатись і світитись' },
+          { name: 'Клітинка Життя', minXp: 251, maxXp: 500, description: 'Має силу й форму' },
+          { name: 'Маленьке Звірятко', minXp: 501, maxXp: 900, description: 'Починає проявляти характер' },
+          { name: 'Людинка-Пупка', minXp: 901, maxXp: 1500, description: 'Справжній герой — досяг гармонії' },
+          { name: 'Вища форма (Новий Світ)', minXp: 1501, maxXp: 9999, description: 'Досягнута нова, невідома форма!' },
+        ];
+        const MAX_HEALTH = 7;
+        const REWARDS = [
+          { id: 'base', name: '🏃‍♂️ Базове тренування (20+ хв)', xp: 10 },
+          { id: 'rain', name: '🌧️ Погана погода / Дощ', xp: 5, isBonus: true },
+          { id: 'run5k', name: '🏃‍♀️ 5 км бігу', xp: 10 },
+          { id: 'run10k', name: '🏃 10 км бігу', xp: 25 },
+          { id: 'run15k', name: '🦿 15 км бігу', xp: 50 },
+          { id: 'squat150', name: '🏋️ 150 присідань', xp: 10 },
+          { id: 'squat300', name: '🏋️‍♂️ 300 присідань', xp: 25 },
+          { id: 'squat600', name: '🏋️‍♀️ 600 присідань', xp: 50 },
+          { id: 'squat1000', name: '💪 1000 присідань', xp: 100 },
+          { id: 'pullup50', name: '🪜 50 підтягувань (для нього)', xp: 5 },
+          { id: 'pullup100', name: '🧗 100 підтягувань (для нього)', xp: 10 },
+          { id: 'menstrual', name: '🩸 Тренування під час місячних (для неї)', xp: 5, isBonus: true },
+          { id: 'walk3k', name: '🚶 Прогулянка 3+ км', xp: 5 },
+          { id: 'yoga', name: '🧘 Розтяжка / Йога (30 хв)', xp: 10 },
+          { id: 'early', name: '🌅 Ранкове тренування до 8:00', xp: 5, isBonus: true },
+          { id: 'fasted', name: '🍽️ Біг натщесерце', xp: 5, isBonus: true },
+          { id: 'together', name: '🤝 Спільне тренування', xp: 10, isBonus: true },
+          { id: 'reading', name: '📚 Читання книги (30 хв)', xp: 5 },
+        ];
+        const MULTIPLIER = { id: 'gymX2', name: '⭐ Додаткове тренування у спортзалі (×2 XP)', factor: 2 };
+        const HEALING_TASKS = [
+            { id: 'heal_squat500', name: '🏋️‍♂️ 500 присідань' },
+            { id: 'heal_water', name: '💧 Пити 2.5 л води (3 дні поспіль)' },
+            { id: 'heal_meditate', name: '🧘 Розтяжка 30 хв (5 днів поспіль)' }, 
+            { id: 'heal_diet', name: '🚫 Тиждень без солодкого/фастфуду (7 днів)' },
+            { id: 'heal_nodopamine', name: '📵 24 години без легкого дофаміну (Соцмережі/Ігри)' },
+        ];
+        const PENALTIES = [
+            { id: 'skip', name: 'Пропуск тренування', health: -1, xp: 0 },
+            { id: 'no_evolve', name: 'Два тижні без еволюції', health: -2, xp: 0 },
+            { id: 'no_circle', name: 'Без "кружечку" (відеозвіту)', health: 0, xp: -10 },
+        ];
 
-        // --- Глобальные переменные Firebase, предоставленные Canvas ---
+        // --- FIREBASE ТА ID КОНСТАНТИ ---
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const GAME_DOC_ID = 'main_pupka_data';
+        const DEFAULT_PUPKA_IMAGE_URL = 'image_915fcc.jpg';
 
-        let app;
-        let db;
-        let auth;
+        // --- ГЛОБАЛЬНИЙ СТАН ---
+        let db = null;
+        let auth = null;
         let userId = null;
         let isAuthReady = false;
+        let isDead = false;
+        let isSaving = false;
 
-        // --- Переменные трекера ---
-        let timerInterval;
-        let startTime = 0;
-        let isRunning = false;
-        let totalSeconds = 0;
+        // Стан гри
+        let xp = 0;
+        let health = MAX_HEALTH;
+        let history = [];
+        let characterBase64 = '';
+        let lastActionId = null;
 
-        // --- UI элементы ---
-        const timerDisplay = document.getElementById('timer-display');
-        const distanceDisplay = document.getElementById('distance-display');
-        const paceDisplay = document.getElementById('pace-display');
-        const caloriesDisplay = document.getElementById('calories-display');
-        const startButton = document.getElementById('start-button');
-        const stopButton = document.getElementById('stop-button');
-        const resetButton = document.getElementById('reset-button');
-        const historyList = document.getElementById('history-list');
-        const historyPlaceholder = document.getElementById('history-placeholder');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const messageBox = document.getElementById('message-box');
-        const userDisplay = document.getElementById('user-display');
+        // Стан UI
+        let showImageInput = false;
+        let showHealOptions = false;
+        let showPenaltyOptions = false;
+        let showResetModal = false;
+        let selectedActivities = [];
+        let hasMultiplier = false;
+        let statusMessageTimer = null;
 
-        // --- Вспомогательные функции ---
+        // --- DOM ЕЛЕМЕНТИ ---
+        const dom = {
+            loader: document.getElementById('loader'),
+            // Status
+            heartDisplay: document.getElementById('heart-display'),
+            imageContainer: document.getElementById('image-container'),
+            pupkaImage: document.getElementById('pupka-image'),
+            imageUploader: document.getElementById('image-uploader'),
+            closeImageUploader: document.getElementById('close-image-uploader'),
+            pasteArea: document.getElementById('paste-area'),
+            pastePrompt: document.getElementById('paste-prompt'),
+            removeImageBtn: document.getElementById('remove-image-btn'),
+            levelPrefix: document.getElementById('level-prefix'),
+            levelName: document.getElementById('level-name'),
+            levelDescription: document.getElementById('level-description'),
+            xpCurrentText: document.getElementById('xp-current-text'),
+            xpNeededText: document.getElementById('xp-needed-text'),
+            xpProgressBar: document.getElementById('xp-progress-bar'),
+            // XP Input
+            xpSectionContent: document.getElementById('xp-section-content'),
+            multiplierCheckbox: document.getElementById('multiplier-checkbox'),
+            multiplierLabel: document.getElementById('multiplier-label'),
+            rewardsList: document.getElementById('rewards-list'),
+            undoBtn: document.getElementById('undo-btn'),
+            addXpBtn: document.getElementById('add-xp-btn'),
+            // Actions
+            cprSection: document.getElementById('cpr-section'),
+            cprBtn: document.getElementById('cpr-btn'),
+            actionButtonsContainer: document.getElementById('action-buttons-container'),
+            showHealBtn: document.getElementById('show-heal-btn'),
+            showPenaltyBtn: document.getElementById('show-penalty-btn'),
+            healOptions: document.getElementById('heal-options'),
+            healTasksList: document.getElementById('heal-tasks-list'),
+            closeHealBtn: document.getElementById('close-heal-btn'),
+            penaltyOptions: document.getElementById('penalty-options'),
+            penaltyTasksList: document.getElementById('penalty-tasks-list'),
+            closePenaltyBtn: document.getElementById('close-penalty-btn'),
+            showResetModalBtn: document.getElementById('show-reset-modal-btn'),
+            // History
+            historySectionContent: document.getElementById('history-section-content'),
+            historyList: document.getElementById('history-list'),
+            userIdDisplay: document.getElementById('user-id-display'),
+            // Modal
+            resetModal: document.getElementById('reset-modal'),
+            cancelResetBtn: document.getElementById('cancel-reset-btn'),
+            confirmResetBtn: document.getElementById('confirm-reset-btn'),
+            resetBtnText: document.getElementById('reset-btn-text'),
+            // Alert
+            statusAlert: document.getElementById('status-alert'),
+            statusAlertIconContainer: document.getElementById('status-alert-icon-container'),
+            statusAlertText: document.getElementById('status-alert-text'),
+        };
 
-        // Форматирует секунды в HH:MM:SS
-        function formatTime(seconds) {
-            const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-            const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-            const s = String(seconds % 60).padStart(2, '0');
-            return `${h}:${m}:${s}`;
-        }
+        // --- ДОПОМІЖНІ ФУНКЦІЇ UI ---
 
-        // Выводит сообщение в информационный блок
-        function showMessage(text, isError = false) {
-            messageBox.textContent = text;
-            messageBox.className = isError ? 'text-center mt-4 text-sm text-red-500 font-medium' : 'text-center mt-4 text-sm text-green-600 font-medium';
-            messageBox.classList.remove('hidden');
-            setTimeout(() => messageBox.classList.add('hidden'), 5000);
-        }
-
-        // Обновляет метрики на основе прошедшего времени
-        function updateMetrics() {
-            if (totalSeconds === 0) {
-                distanceDisplay.textContent = '0.00';
-                paceDisplay.textContent = '--\'--';
-                caloriesDisplay.textContent = '0';
-                return;
+        function toggleElement(el, show) {
+            if (show) {
+                el.classList.remove('hidden-item');
+                el.classList.add('visible-item');
+            } else {
+                el.classList.remove('visible-item');
+                el.classList.add('hidden-item');
             }
+        }
 
-            // Моделирование дистанции: 1 км за каждые 6 минут (360 секунд), средний темп 6:00 мин/км
-            const secondsPerKm = 360;
-            const distanceKm = (totalSeconds / secondsPerKm);
+        function setButton(button, { text, disabled }) {
+            if (text) button.innerText = text;
+            button.disabled = disabled;
+        }
+
+        function showStatusMessage(type, text) {
+            if (statusMessageTimer) clearTimeout(statusMessageTimer);
+
+            dom.statusAlertText.textContent = text;
             
-            // Темп = totalSeconds / distanceKm (секунды/км)
-            const paceTotalSeconds = totalSeconds / distanceKm;
-            const paceMinutes = Math.floor(paceTotalSeconds / 60);
-            const paceSeconds = Math.round(paceTotalSeconds % 60);
-            const paceText = `${String(paceMinutes).padStart(2, '0')}'${String(paceSeconds).padStart(2, '0')}`;
-
-            // Моделирование калорий: ~70 ккал за каждый километр (зависит от веса и скорости)
-            const caloriesBurned = Math.round(distanceKm * 70);
-
-            // Обновление UI
-            timerDisplay.textContent = formatTime(totalSeconds);
-            distanceDisplay.textContent = distanceKm.toFixed(2);
-            paceDisplay.textContent = paceText;
-            caloriesDisplay.textContent = caloriesBurned;
-        }
-
-        // --- Основная логика трекера ---
-
-        function startRun() {
-            if (isRunning) return;
-            isRunning = true;
-            startTime = Date.now() - (totalSeconds * 1000); // Сохраняем начальное время
-
-            // Обновление UI кнопок
-            startButton.classList.add('hidden');
-            stopButton.classList.remove('hidden');
-            stopButton.disabled = false;
-            resetButton.classList.add('hidden');
-            resetButton.disabled = true;
-
-            timerInterval = setInterval(() => {
-                totalSeconds++;
-                updateMetrics();
-            }, 1000);
-
-            showMessage("Тренировка начата!", false);
-        }
-
-        function stopRun() {
-            if (!isRunning) return;
-            clearInterval(timerInterval);
-            isRunning = false;
-
-            // Обновление UI кнопок
-            startButton.classList.remove('hidden');
-            startButton.disabled = true;
-            stopButton.classList.add('hidden');
-            resetButton.classList.remove('hidden');
-            resetButton.disabled = false;
+            let colorClass, iconName;
+            switch (type) {
+                case 'success':
+                    colorClass = 'bg-green-100 text-green-800 border-green-400';
+                    iconName = 'check-circle';
+                    break;
+                case 'error':
+                    colorClass = 'bg-red-100 text-red-800 border-red-400';
+                    iconName = 'x-circle';
+                    break;
+                case 'warning':
+                    colorClass = 'bg-yellow-100 text-yellow-800 border-yellow-400';
+                    iconName = 'zap';
+                    break;
+                case 'info':
+                default:
+                    colorClass = 'bg-blue-100 text-blue-800 border-blue-400';
+                    iconName = 'refresh-cw';
+                    break;
+            }
             
-            // Сохранение данных в Firestore
-            saveRun();
-            showMessage("Тренировка остановлена. Идет сохранение...", false);
+            dom.statusAlert.className = `fixed bottom-4 right-4 z-50 p-4 rounded-xl shadow-lg border-l-4 font-semibold max-w-xs transition-all duration-300 ${colorClass} visible-item`;
+            
+            const iconEl = document.createElement('i');
+            iconEl.setAttribute('data-lucide', iconName);
+            iconEl.className = `w-5 h-5 mr-3 ${type === 'info' ? 'animate-spin' : ''}`;
+            dom.statusAlertIconContainer.innerHTML = '';
+            dom.statusAlertIconContainer.appendChild(iconEl);
+            lucide.createIcons();
+
+            statusMessageTimer = setTimeout(() => {
+                toggleElement(dom.statusAlert, false);
+            }, 5000);
         }
 
-        function resetRun() {
-            if (isRunning) return;
+        // --- ФУНКЦІЇ РЕНДЕРУ (ОНОВЛЕННЯ UI) ---
 
-            // Сброс всех значений
-            totalSeconds = 0;
-            updateMetrics();
-
-            // Обновление UI кнопок
-            startButton.classList.remove('hidden');
-            startButton.disabled = false;
-            stopButton.classList.add('hidden');
-            resetButton.classList.add('hidden');
-            resetButton.disabled = true;
-
-            showMessage("Данные сброшены. Можно начать новый забег.", false);
+        function renderHeartDisplay() {
+            dom.heartDisplay.innerHTML = '';
+            for (let i = 0; i < MAX_HEALTH; i++) {
+                const heart = document.createElement('i');
+                heart.setAttribute('data-lucide', 'heart');
+                heart.className = `w-6 h-6 transition-colors duration-300 ${i < health ? 'fill-red-500 text-red-500' : 'fill-gray-300 text-gray-400'}`;
+                dom.heartDisplay.appendChild(heart);
+            }
+            lucide.createIcons();
         }
 
-        // --- Логика Firestore ---
+        function renderStatusDisplay() {
+            renderHeartDisplay();
+            
+            dom.pupkaImage.src = characterBase64 || DEFAULT_PUPKA_IMAGE_URL;
+            dom.removeImageBtn.disabled = isSaving || !characterBase64 || isDead;
 
-        // Сохранение текущего забега в базу данных
-        async function saveRun() {
-            if (!db || !userId || totalSeconds < 60) {
-                if (totalSeconds < 60 && totalSeconds > 0) {
-                     showMessage("Забег слишком короткий для сохранения (минимум 60 секунд).", true);
+            const currentLevel = LEVELS.find(l => xp >= l.minXp && xp <= l.maxXp) || LEVELS[0];
+            const nextLevel = LEVELS[LEVELS.indexOf(currentLevel) + 1] || currentLevel;
+
+            dom.levelPrefix.textContent = `Рівень ${LEVELS.indexOf(currentLevel) + 1}`;
+            dom.levelName.textContent = currentLevel.name;
+            dom.levelDescription.textContent = currentLevel.description;
+
+            dom.xpCurrentText.textContent = `XP: ${xp}`;
+            
+            let xpToNext, progress;
+            if (currentLevel.maxXp === nextLevel.maxXp) {
+                xpToNext = 0;
+                progress = 100;
+            } else {
+                const range = nextLevel.minXp - currentLevel.minXp;
+                const progressInLevel = xp - currentLevel.minXp;
+                progress = Math.min(100, (progressInLevel / range) * 100);
+                xpToNext = nextLevel.minXp - xp;
+                if (xp >= nextLevel.minXp) {
+                   xpToNext = nextLevel.maxXp - xp;
                 }
+            }
+
+            dom.xpNeededText.textContent = xpToNext > 0 ? `До Наст. Рівня: ${xpToNext}` : 'MAX';
+            dom.xpProgressBar.style.width = `${progress}%`;
+            dom.xpProgressBar.className = `h-4 rounded-full transition-all duration-700 ${progress >= 100 ? 'bg-green-500' : 'bg-yellow-500'}`;
+        }
+        
+        function renderXpInputSection() {
+            // Оновлення списку активностей
+            dom.rewardsList.innerHTML = '';
+            REWARDS.forEach(reward => {
+                let rewardName = (reward.id === 'yoga') ? '🧘 Розтяжка / Йога (30 хв)' : reward.name;
+                
+                const isSelected = selectedActivities.includes(reward.id);
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-lg border cursor-pointer transition-all ${
+                  isSelected 
+                    ? 'bg-indigo-100 border-indigo-500 shadow-md' 
+                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                }`;
+                div.innerHTML = `
+                    <div class="font-medium text-gray-700">${rewardName}</div>
+                    <div class="text-sm font-bold ${reward.isBonus ? 'text-green-600' : 'text-indigo-600'}">+${reward.xp} XP</div>
+                `;
+                div.onclick = () => toggleActivity(reward.id);
+                dom.rewardsList.appendChild(div);
+            });
+
+            // Оновлення кнопок
+            dom.multiplierCheckbox.checked = hasMultiplier;
+            dom.addXpBtn.disabled = selectedActivities.length === 0 || isSaving || isDead;
+            dom.undoBtn.disabled = !lastActionId || isSaving || isDead;
+        }
+
+        function renderActionButtons() {
+            // Стан смерті
+            toggleElement(dom.cprSection, isDead);
+            
+            // Блокування кнопок, якщо мертвий
+            if (isDead) {
+                dom.actionButtonsContainer.classList.add('opacity-50', 'pointer-events-none');
+                // Сховати відкриті опції
+                toggleElement(dom.healOptions, false);
+                toggleElement(dom.penaltyOptions, false);
+                showHealOptions = false;
+                showPenaltyOptions = false;
+            } else {
+                dom.actionButtonsContainer.classList.remove('opacity-50', 'pointer-events-none');
+            }
+            
+            // Оновлення кнопок
+            dom.cprBtn.disabled = isSaving;
+            dom.showHealBtn.disabled = isSaving || isDead || health === MAX_HEALTH;
+            dom.showPenaltyBtn.disabled = isSaving || isDead;
+
+            // Оновлення списків (робимо це один раз при завантаженні, оскільки вони статичні)
+            // (Викликається в initUI)
+
+            // Стан видимості
+            toggleElement(dom.healOptions, showHealOptions && !isDead);
+            toggleElement(dom.penaltyOptions, showPenaltyOptions && !isDead);
+        }
+
+        function renderHistory() {
+            if (history.length === 0) {
+                dom.historyList.innerHTML = '<p class="text-gray-500 italic">Тут відображатимуться ваші дії.</p>';
                 return;
             }
 
-            const runData = {
-                durationSeconds: totalSeconds,
-                distanceKm: parseFloat(distanceDisplay.textContent),
-                paceMinPerKm: paceDisplay.textContent,
-                caloriesBurned: parseInt(caloriesDisplay.textContent),
-                timestamp: serverTimestamp(),
-                userId: userId,
-            };
+            dom.historyList.innerHTML = '';
+            history.forEach(item => {
+                const healthStatus = item.details?.endHealth !== undefined && item.details.endHealth !== null
+                    ? ` (${item.details.endHealth}/${MAX_HEALTH} ❤️)`
+                    : '';
+                const isLastAction = lastActionId === item.id;
+                const timestamp = item.timestamp && item.timestamp.seconds 
+                    ? new Date(item.timestamp.seconds * 1000).toLocaleTimeString('uk-UA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) 
+                    : '...';
 
-            const runsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/running_logs`);
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-lg border-l-4 shadow-sm flex justify-between items-center transition-all duration-300 ${
+                    isLastAction 
+                        ? 'border-orange-500 bg-orange-100' 
+                        : 'border-indigo-500 bg-gray-50'
+                }`;
+                
+                div.innerHTML = `
+                    <span class="text-gray-700 font-medium break-words w-4/5">
+                        ${isLastAction ? '<span class="font-extrabold text-orange-700 mr-1">[ОСТАННЯ]</span>' : ''}
+                        ${item.details?.description || item.type}
+                        <span class="font-bold text-indigo-600">${healthStatus}</span>
+                    </span>
+                    <span class="text-xs text-gray-500 whitespace-nowrap flex items-center">
+                      <i data-lucide="clock" class="w-3 h-3 mr-1"></i>
+                      ${timestamp}
+                    </span>
+                `;
+                dom.historyList.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        function renderAll() {
+            if (!isAuthReady) return;
             
-            try {
-                await addDoc(runsCollectionRef, runData);
-                showMessage("Забег успешно сохранен!", false);
-            } catch (error) {
-                console.error("Ошибка при сохранении забега:", error);
-                showMessage("Ошибка сохранения данных.", true);
-            } finally {
-                // После сохранения автоматически сбрасываем счетчик, чтобы начать новый забег
-                resetRun();
+            renderStatusDisplay();
+            renderXpInputSection();
+            renderActionButtons();
+            renderHistory();
+            
+            // Глобальне блокування UI
+            const uiSections = [dom.xpSectionContent, dom.actionButtonsContainer, dom.historySectionContent, dom.imageContainer];
+            if (isDead) {
+                uiSections.forEach(el => el.classList.add('ui-blocked'));
+                dom.imageContainer.classList.add('opacity-70', 'cursor-not-allowed');
+                dom.imageContainer.classList.remove('hover:scale-105', 'cursor-pointer');
+            } else {
+                uiSections.forEach(el => el.classList.remove('ui-blocked'));
+                 dom.imageContainer.classList.remove('opacity-70', 'cursor-not-allowed');
+                 dom.imageContainer.classList.add('hover:scale-105', 'cursor-pointer');
             }
+            
+            // Специфічне блокування для ImageUploader
+            if (isDead) {
+                dom.pasteArea.classList.add('opacity-50', 'cursor-not-allowed');
+                dom.pasteArea.style.pointerEvents = 'none';
+                dom.removeImageBtn.disabled = true;
+                dom.closeImageUploader.disabled = true;
+            } else {
+                dom.pasteArea.classList.remove('opacity-50', 'cursor-not-allowed');
+                dom.pasteArea.style.pointerEvents = 'auto';
+                dom.removeImageBtn.disabled = isSaving || !characterBase64;
+                 dom.closeImageUploader.disabled = false;
+            }
+
+            dom.userIdDisplay.textContent = userId || '...';
         }
 
-        // Рендеринг одного элемента истории
-        function renderRunItem(run) {
-            const date = run.timestamp ? new Date(run.timestamp.seconds * 1000).toLocaleDateString('ru-RU') : 'N/A';
-            const time = run.timestamp ? new Date(run.timestamp.seconds * 1000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';
+        // --- ЛОГІКА FIREBASE ---
+
+        const getDocRef = () => doc(db, `artifacts/${appId}/users/${userId}/pupka_game/${GAME_DOC_ID}`);
+        const getHistoryColRef = () => collection(getDocRef(), 'history');
+
+        const addHistoryEntry = async (type, details, endHealth) => {
+            if (!db || userId === 'anon-local') return null;
+            try {
+                const historyRef = doc(getHistoryColRef());
+                await setDoc(historyRef, {
+                    type,
+                    details: { ...details, endHealth },
+                    timestamp: serverTimestamp(),
+                }, { merge: true });
+                return historyRef.id;
+            } catch (e) {
+                console.error("Помилка додавання історії:", e);
+                return null;
+            }
+        };
+
+        const updateGameState = async (xpChange, healthUpdate, description, type) => {
+            if (!db || userId === 'anon-local' || isSaving) {
+                console.warn("Не можу зберегти: DB не готова або вже зберігаю.");
+                return;
+            }
             
-            const div = document.createElement('div');
-            div.className = 'p-4 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center';
-            div.innerHTML = `
-                <div>
-                    <p class="text-sm font-semibold text-gray-800">${date} ${time}</p>
-                    <p class="text-xs text-gray-500">Длительность: ${formatTime(run.durationSeconds)}</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-lg font-bold text-indigo-600">${run.distanceKm.toFixed(2)} км</p>
-                    <p class="text-xs text-gray-600">Темп: ${run.paceMinPerKm}</p>
-                    <p class="text-xs text-red-500">${run.caloriesBurned} ккал</p>
-                </div>
-            `;
-            return div;
-        }
+            setIsSaving(true);
+            renderAll(); // Оновити UI, щоб показати стан збереження
+            const docRef = getDocRef();
 
-        // Подписка на изменения истории (onSnapshot)
-        function subscribeToHistory() {
-            if (!db || !userId) return;
+            try {
+                let finalHealth = -1;
+                
+                await runTransaction(db, async (transaction) => {
+                    const docSnap = await transaction.get(docRef);
+                    
+                    let currentXp = 0;
+                    let currentHealth = MAX_HEALTH;
+                    let currentBase64 = '';
 
-            const runsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/running_logs`);
-            
-            // Запрос: сортировка по времени создания по убыванию
-            const q = query(runsCollectionRef, orderBy("timestamp", "desc"));
-            
-            loadingSpinner.classList.remove('hidden');
-            historyPlaceholder.textContent = 'Загрузка...';
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        currentHealth = data.health !== undefined && data.health !== null ? data.health : MAX_HEALTH;
+                        currentXp = data.xp || 0;
+                        currentBase64 = data.characterBase64 || '';
+                    }
+                    
+                    let calculatedHealth;
+                    if (healthUpdate === 'SET_TO_ONE' && currentHealth <= 0) {
+                        calculatedHealth = 1;
+                    } else if (typeof healthUpdate === 'number') {
+                        calculatedHealth = Math.min(MAX_HEALTH, Math.max(0, currentHealth + healthUpdate));
+                    } else {
+                        calculatedHealth = currentHealth;
+                    }
 
-            onSnapshot(q, (snapshot) => {
-                loadingSpinner.classList.add('hidden');
-                historyList.innerHTML = '';
+                    const calculatedXp = Math.max(0, currentXp + xpChange);
+                    
+                    isDead = calculatedHealth <= 0; // Оновлення глобального стану
+                    finalHealth = calculatedHealth;
+                    
+                    const currentLevel = LEVELS.find(l => calculatedXp >= l.minXp && calculatedXp <= l.maxXp) || LEVELS[0];
 
-                if (snapshot.empty) {
-                    historyPlaceholder.textContent = 'У вас пока нет сохраненных забегов.';
-                    historyList.appendChild(historyPlaceholder);
+                    transaction.set(docRef, { 
+                        xp: calculatedXp, 
+                        health: calculatedHealth,
+                        characterBase64: currentBase64, 
+                        updatedAt: serverTimestamp(),
+                        level: currentLevel.name,
+                    }, { merge: true });
+                    
+                    return { finalHealth };
+                });
+                
+                const newHistoryId = await addHistoryEntry(type, { 
+                    xpChange: xpChange, 
+                    healthChange: healthUpdate, 
+                    description: description 
+                }, finalHealth);
+
+                if (newHistoryId) {
+                    await setDoc(docRef, { lastActionId: newHistoryId }, { merge: true });
+                    // lastActionId оновиться через onSnapshot
+                }
+                
+                console.log("Стан гри успішно оновлено.");
+
+            } catch (e) {
+                console.error("Помилка транзакції оновлення стану:", e);
+                showStatusMessage('error', 'Помилка оновлення стану. Перевірте консоль.');
+            } finally {
+                setIsSaving(false);
+                // onSnapshot оновить UI
+            }
+        };
+
+        const handleUndoLastAction = async () => {
+            if (!lastActionId || isSaving || !db || userId === 'anon-local') {
+                showStatusMessage('warning', 'Неможливо відмінити: немає останньої дії або система зайнята.');
+                return;
+            }
+
+            setIsSaving(true);
+            renderAll();
+            const docRef = getDocRef();
+            const historyDocRef = doc(getHistoryColRef(), lastActionId);
+
+            try {
+                let description = '';
+                let isCprUndo = false;
+                
+                const historySnap = await getDoc(historyDocRef);
+                if (!historySnap.exists()) {
+                    showStatusMessage('error', 'Помилка: запис історії не знайдено.');
+                    await setDoc(docRef, { lastActionId: null }, { merge: true });
+                    // lastActionId оновиться через onSnapshot
+                    setIsSaving(false);
+                    renderAll();
                     return;
                 }
+                
+                const historyData = historySnap.data();
+                const details = historyData.details || {};
+                
+                const undoneXpChange = details.xpChange ? -details.xpChange : 0;
+                let undoneHealthChange = 0;
+                
+                if (typeof details.healthChange === 'number') {
+                    undoneHealthChange = -details.healthChange;
+                } else if (details.healthChange === 'SET_TO_ONE') {
+                    isCprUndo = true;
+                }
+                
+                description = `ВІДМІНА: ${details.description || 'невідомої дії'}`;
 
-                snapshot.docs.forEach(doc => {
-                    historyList.appendChild(renderRunItem(doc.data()));
+                if (isCprUndo) {
+                    showStatusMessage('error', 'Відміна «Штучного дихання» (CPR) не підтримується.');
+                    setIsSaving(false);
+                    renderAll();
+                    return;
+                }
+                
+                await runTransaction(db, async (transaction) => {
+                    const docSnap = await transaction.get(docRef);
+                    if (!docSnap.exists()) throw new Error("Основний документ Pupka не знайдено.");
+
+                    const data = docSnap.data();
+                    const currentXp = data.xp || 0;
+                    const currentHealth = data.health !== undefined && data.health !== null ? data.health : MAX_HEALTH;
+
+                    const calculatedXp = Math.max(0, currentXp + undoneXpChange);
+                    const calculatedHealth = Math.min(MAX_HEALTH, Math.max(0, currentHealth + undoneHealthChange));
+                    const newLevel = (LEVELS.find(l => calculatedXp >= l.minXp && calculatedXp <= l.maxXp) || LEVELS[0]).name;
+
+                    transaction.update(docRef, { 
+                        xp: calculatedXp, 
+                        health: calculatedHealth,
+                        lastActionId: null,
+                        updatedAt: serverTimestamp(),
+                        level: newLevel
+                    });
+                    
+                    transaction.delete(historyDocRef);
                 });
-            }, (error) => {
-                console.error("Ошибка подписки на историю:", error);
-                loadingSpinner.classList.add('hidden');
-                historyPlaceholder.textContent = 'Ошибка загрузки истории.';
-                historyList.appendChild(historyPlaceholder);
-            });
-        }
+                
+                showStatusMessage('success', `Дія успішно відмінена: ${description}`);
+                // lastActionId оновиться через onSnapshot
+                
+            } catch (e) {
+                console.error("Помилка транзакції відміни:", e);
+                showStatusMessage('error', 'Помилка відміни дії. Перевірте консоль.');
+            } finally {
+                setIsSaving(false);
+                // onSnapshot оновить UI
+            }
+        };
 
-        // --- Инициализация Firebase и Аутентификация ---
-
-        window.onload = async function() {
-            if (!firebaseConfig) {
-                console.error("Firebase config is missing.");
-                historyPlaceholder.textContent = 'Ошибка: Конфигурация Firebase отсутствует.';
+        const handleSaveBase64 = async (base64) => {
+            if (isDead) {
+                showStatusMessage('warning', 'Пупка мертва. Не можна міняти фото, поки її не оживлять!');
                 return;
             }
+            if (!db || userId === 'anon-local' || isSaving) return;
+            
+            setIsSaving(true);
+            renderAll();
+            showStatusMessage('info', 'Зберігаю зображення...');
+
+            const docRef = getDocRef();
+            try {
+                await setDoc(docRef, { characterBase64: base64, updatedAt: serverTimestamp() }, { merge: true });
+                // characterBase64 оновиться через onSnapshot
+                toggleElement(dom.imageUploader, false);
+                showImageInput = false;
+                showStatusMessage('success', 'Зображення Пупки успішно оновлено!');
+                console.log("Base64 зображення оновлено.");
+            } catch (e) {
+                console.error("Помилка збереження Base64 зображення:", e);
+                showStatusMessage('error', 'Помилка збереження. Можливо, зображення занадто велике (ліміт Firestore 1МБ).');
+            } finally {
+                setIsSaving(false);
+                // onSnapshot оновить UI
+            }
+        };
+
+        const handleRemoveImage = () => {
+            if (isDead) {
+                showStatusMessage('warning', 'Пупка мертва. Не можна міняти фото, поки її не оживлять!');
+                return;
+            }
+            handleSaveBase64('');
+            toggleElement(dom.imageUploader, false);
+            showImageInput = false;
+        };
+
+        const handleResetCharacter = async () => {
+            if (!db || userId === 'anon-local' || isSaving) return;
+
+            setIsSaving(true);
+            setButton(dom.confirmResetBtn, { text: 'Скидаю...', disabled: true });
+            dom.cancelResetBtn.disabled = true;
 
             try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
+                const docRef = getDocRef();
+                await setDoc(docRef, { 
+                    xp: 0, 
+                    health: MAX_HEALTH,
+                    characterBase64: '',
+                    lastActionId: null,
+                    updatedAt: serverTimestamp(),
+                    level: LEVELS[0].name,
+                }, { merge: true });
                 
-                // Обработка аутентификации
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        isAuthReady = true;
-                        userDisplay.textContent = `User ID: ${userId}`;
-                        subscribeToHistory(); // Запускаем подписку после получения userId
-                        console.log("Authenticated with UID:", userId);
-                    } else {
-                        // Если аутентификация не удалась, используем анонимный вход или UUID
-                        userId = crypto.randomUUID(); 
-                        isAuthReady = true;
-                        userDisplay.textContent = `User ID: ${userId} (Anon)`;
-                        historyPlaceholder.textContent = 'Необходима аутентификация для сохранения истории.';
-                        console.warn("User not authenticated, using anonymous UUID.");
-                    }
-                });
+                const historyColRef = getHistoryColRef();
+                const historySnapshot = await getDocs(historyColRef);
+                const batch = writeBatch(db);
+                historySnapshot.docs.forEach((d) => batch.delete(d.ref));
+                await batch.commit();
 
-                // Попытка входа с предоставленным токеном или анонимный вход
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                console.log("Персонаж успішно перестворений.");
+                
+                selectedActivities = [];
+                hasMultiplier = false;
+                showHealOptions = false;
+                showPenaltyOptions = false;
+                toggleElement(dom.resetModal, false);
+                showResetModal = false;
+                // isDead, characterBase64, lastActionId оновляться через onSnapshot
+                showStatusMessage('success', 'Персонаж успішно перестворений!');
 
-            } catch (error) {
-                console.error("Firebase Initialization or Auth Error:", error);
-                historyPlaceholder.textContent = 'Ошибка инициализации: Проверьте консоль.';
+            } catch (e) {
+                console.error("Помилка перестворення персонажа:", e);
+                showStatusMessage('error', 'Помилка перестворення.');
+            } finally {
+                setIsSaving(false);
+                setButton(dom.confirmResetBtn, { text: 'Перестворити', disabled: false });
+                dom.cancelResetBtn.disabled = false;
+                // onSnapshot оновить UI
+            }
+        };
+
+        // --- ЛОГІКА XP ---
+
+        const handleXPUpdate = () => {
+            if (isDead) {
+                showStatusMessage('warning', 'Пупка мертва. Потрібне «Штучне дихання»!');
+                return;
+            }
+            if (selectedActivities.length === 0) return;
+
+            let totalXP = selectedActivities.reduce((sum, activityId) => {
+                const reward = REWARDS.find(r => r.id === activityId);
+                return sum + (reward ? reward.xp : 0);
+            }, 0);
+
+            if (hasMultiplier) {
+                totalXP *= MULTIPLIER.factor;
             }
 
-            // --- Добавление слушателей событий ---
-            startButton.addEventListener('click', startRun);
-            stopButton.addEventListener('click', stopRun);
-            resetButton.addEventListener('click', resetRun);
+            const description = `${selectedActivities.map(id => REWARDS.find(r => r.id === id)?.name || id).join(', ')}` + (hasMultiplier ? ` (×${MULTIPLIER.factor})` : '');
+
+            updateGameState(totalXP, 0, `Отримано XP: +${totalXP}. Активності: ${description}`, 'update');
+
+            selectedActivities = [];
+            hasMultiplier = false;
+            // onSnapshot оновить UI
         };
+
+        const toggleActivity = (id) => {
+            if (isDead) return;
+            
+            if (selectedActivities.includes(id)) {
+                selectedActivities = selectedActivities.filter(item => item !== id);
+            } else {
+                selectedActivities.push(id);
+            }
+            renderXpInputSection(); // Оновити лише цю секцію
+        };
+
+        // --- ЛОГІКА ЗДОРОВ'Я ---
+
+        const handleHealthChange = (healthChange, xpChange, actionName, type) => {
+            if (isDead && healthChange <= 0) { 
+                showStatusMessage('warning', 'Пупка мертва. Більше штрафів накладати не можна.');
+                return;
+            }
+            updateGameState(xpChange, healthChange, `${actionName}: ${healthChange > 0 ? '+' : ''}${healthChange} ❤️${xpChange !== 0 ? `, ${xpChange > 0 ? '+' : ''}${xpChange} XP` : ''}`, type);
+            showHealOptions = false;
+            showPenaltyOptions = false;
+            // onSnapshot оновить UI
+        };
+
+        const handleCPR = async () => {
+            if (!isDead) return; 
+            updateGameState(0, 'SET_TO_ONE', 'Опція «Штучне дихання» (42 км за 2 дні) виконана. Пупка ожила, але виснажена.', 'heal');
+        };
+        
+        // --- ЛОГІКА IMAGE UPLOADER ---
+        
+        const handlePaste = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (isDead) {
+                showStatusMessage('warning', 'Пупка мертва. Не можна міняти фото!');
+                return;
+            }
+            
+            dom.pastePrompt.textContent = 'Обробляю зображення...';
+            dom.pasteArea.classList.add('bg-indigo-200', 'border-indigo-600');
+            showStatusMessage('info', 'Обробляю зображення... ');
+
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            let imageFile = null;
+
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf("image") !== -1) {
+                    imageFile = items[i].getAsFile();
+                    break;
+                }
+            }
+
+            if (imageFile) {
+                if (imageFile.size > 1024 * 1024) { // 1МБ
+                    showStatusMessage('error', 'Зображення занадто велике ( > 1МБ). Спробуйте менше.');
+                } else {
+                    try {
+                        const base64Data = await fileToBase64(imageFile);
+                        await handleSaveBase64(base64Data);
+                    } catch (error) {
+                        console.error("Помилка при конвертації Base64:", error);
+                        showStatusMessage('error', 'Помилка при обробці зображення.');
+                    }
+                }
+            } else {
+                showStatusMessage('warning', 'Не вдалося знайти зображення у вставлених даних.');
+            }
+            
+            dom.pastePrompt.textContent = 'Натисніть тут і вставте (Ctrl+V)';
+            dom.pasteArea.classList.remove('bg-indigo-200', 'border-indigo-600');
+        };
+        
+        const fileToBase64 = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+                reader.readDataURL(file);
+            });
+        };
+
+        // --- ІНІЦІАЛІЗАЦІЯ UI ТА ПОДІЙ ---
+
+        function initUI() {
+            // Заповнення статичних, але динамічно генерованих списків
+            
+            // X2 Multiplier
+            dom.multiplierLabel.textContent = MULTIPLIER.name;
+
+            // Heal Tasks
+            dom.healTasksList.innerHTML = '';
+            HEALING_TASKS.forEach(task => {
+                const button = document.createElement('button');
+                button.className = "flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-pink-500 hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed w-full";
+                button.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5 mr-2"></i> ${task.name}`;
+                button.onclick = () => handleHealthChange(1, 0, `Лікування: ${task.name}`, 'heal');
+                dom.healTasksList.appendChild(button);
+            });
+
+            // Penalty Tasks
+            dom.penaltyTasksList.innerHTML = '';
+            PENALTIES.forEach(penalty => {
+                const button = document.createElement('button');
+                button.className = "flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full";
+                button.innerHTML = `<i data-lucide="x-circle" class="w-5 h-5 mr-2"></i> ${penalty.name} (${penalty.health ? penalty.health + ' ❤️' : ''} ${penalty.xp ? (penalty.xp > 0 ? '+' : '') + penalty.xp + ' XP' : ''})`;
+                button.onclick = () => handleHealthChange(penalty.health, penalty.xp, `Штраф: ${penalty.name}`, 'penalty');
+                dom.penaltyTasksList.appendChild(button);
+            });
+            
+            // Рендер іконок, доданих вище
+            lucide.createIcons();
+
+            // Прив'язка подій
+            
+            // Status
+            dom.imageContainer.onclick = () => {
+                if (!isDead) {
+                    showImageInput = !showImageInput;
+                    toggleElement(dom.imageUploader, showImageInput);
+                    if(showImageInput) dom.pasteArea.focus();
+                }
+            };
+            dom.closeImageUploader.onclick = () => {
+                showImageInput = false;
+                toggleElement(dom.imageUploader, false);
+            };
+            dom.pasteArea.onpaste = handlePaste;
+            dom.removeImageBtn.onclick = handleRemoveImage;
+
+            // XP
+            dom.multiplierCheckbox.onchange = (e) => { hasMultiplier = e.target.checked; };
+            dom.addXpBtn.onclick = handleXPUpdate;
+            dom.undoBtn.onclick = handleUndoLastAction;
+
+            // Actions
+            dom.cprBtn.onclick = handleCPR;
+            dom.showHealBtn.onclick = () => {
+                showHealOptions = !showHealOptions;
+                renderActionButtons();
+            };
+            dom.showPenaltyBtn.onclick = () => {
+                showPenaltyOptions = !showPenaltyOptions;
+                renderActionButtons();
+            };
+            dom.closeHealBtn.onclick = () => { showHealOptions = false; renderActionButtons(); };
+            dom.closePenaltyBtn.onclick = () => { showPenaltyOptions = false; renderActionButtons(); };
+            
+            // Reset
+            dom.showResetModalBtn.onclick = () => {
+                showResetModal = true;
+                toggleElement(dom.resetModal, true);
+            };
+            dom.cancelResetBtn.onclick = () => {
+                showResetModal = false;
+                toggleElement(dom.resetModal, false);
+            };
+            dom.confirmResetBtn.onclick = handleResetCharacter;
+        }
+
+        // --- ГОЛОВНА ФУНКЦІЯ (ЗАПУСК) ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initUI(); // Ініціалізація UI та подій
+            
+            if (firebaseConfig) {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            userId = user.uid;
+                        } else if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            const anonymousUser = await signInAnonymously(auth);
+                            userId = anonymousUser.user.uid;
+                        }
+                        isAuthReady = true;
+                        dom.loader.style.display = 'none'; // Сховати завантажувач
+                        
+                        // Запуск слухачів Firestore
+                        startFirestoreListeners();
+                        renderAll(); // Перший рендер
+                    });
+                } catch (error) {
+                    console.error("Помилка ініціалізації Firebase:", error);
+                    dom.loader.innerHTML = 'Помилка завантаження. Перевірте консоль.';
+                }
+            } else {
+                console.warn("Firebase config не надано. Дані не будуть збережені.");
+                userId = 'anon-local';
+                isAuthReady = true;
+                dom.loader.style.display = 'none';
+                renderAll();
+            }
+        });
+        
+        function startFirestoreListeners() {
+            if (!db || !userId) return;
+
+            const stateDocRef = doc(db, `artifacts/${appId}/users/${userId}/pupka_game/${GAME_DOC_ID}`);
+            const historyColRef = collection(stateDocRef, 'history');
+
+            // Listener для стану
+            onSnapshot(stateDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const newHealth = data.health !== undefined && data.health !== null ? data.health : MAX_HEALTH;
+
+                    xp = data.xp || 0;
+                    health = newHealth;
+                    isDead = newHealth <= 0;
+                    characterBase64 = data.characterBase64 || '';
+                    lastActionId = data.lastActionId || null;
+                } else {
+                    // Ініціалізація, якщо документ не існує
+                    xp = 0;
+                    health = MAX_HEALTH;
+                    isDead = false;
+                    characterBase64 = '';
+                    lastActionId = null;
+                    if (userId !== 'anon-local') {
+                        setDoc(stateDocRef, { xp: 0, health: MAX_HEALTH, characterBase64: '', lastActionId: null, createdAt: serverTimestamp() }, { merge: true })
+                            .catch(e => console.error("Помилка ініціалізації стану:", e));
+                    }
+                }
+                renderAll(); // Оновити весь UI після отримання нових даних
+            }, (error) => {
+                console.error("Помилка onSnapshot (state):", error);
+            });
+
+            // Listener для історії
+            const q = query(historyColRef, orderBy('timestamp', 'desc'), limit(10));
+            onSnapshot(q, (snapshot) => {
+                history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderHistory(); // Оновити лише історію
+                renderXpInputSection(); // Оновити стан кнопки "Undo"
+            }, (error) => {
+                console.error("Помилка onSnapshot (history):", error);
+            });
+        }
+        
     </script>
 </body>
 </html>
