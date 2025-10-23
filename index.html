@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale1.0">
-    <!-- 1. Змінено Title -->
     <title>Pupka Tracker (Firebase Sync)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- 2. Додано Firebase SDK -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
     
@@ -52,12 +51,12 @@
 <body class="bg-gray-50 p-4 sm:p-8 font-sans">
 
     <!-- Головний контейнер -->
-    <div class="max-w-4xl mx-auto space-y-8">
+    <div class="max-w-6xl mx-auto space-y-8" id="pupka-tracker">
         
-        <!-- Хедер і Статус -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Хедер і Статус: ЗМІНА ГРІДУ: md:grid-cols-4 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             
-            <!-- Секція Статусу (StatusDisplay) -->
+            <!-- Секція Статусу (StatusDisplay) - ЗМІНА РОЗМІРУ: md:col-span-1 -->
             <div class="md:col-span-1">
                 <div class="bg-white p-6 rounded-2xl shadow-xl text-center space-y-4">
                     <h1 class="text-3xl font-extrabold text-indigo-700">Пупка</h1>
@@ -67,38 +66,50 @@
                         <!-- Серця будуть вставлені сюди -->
                     </div>
 
-                    <!-- Character Visualization (Pupka Image) -->
-                    <div id="image-container" class="w-28 h-28 mx-auto mb-4 rounded-full overflow-hidden shadow-xl border-4 border-indigo-200 transition-all duration-300 transform hover:scale-105 cursor-pointer"
+                    <!-- Character Visualization (Pupka Image) - ЗБІЛЬШЕНО РОЗМІР (w-48 h-48 на md) -->
+                    <div id="image-container" class="w-40 h-40 md:w-48 md:h-48 mx-auto mb-4 rounded-full overflow-hidden shadow-xl border-4 border-indigo-200 transition-all duration-300 transform hover:scale-105 cursor-pointer"
                          role="button"
                          aria-label="Змінити зображення Пупки">
                         <img id="pupka-image"
-                             src="https://placehold.co/112x112/ff9900/ffffff?text=Pupka" 
+                             src="https://placehold.co/192x192/ff9900/ffffff?text=Pupka" 
                              alt="Pupka Character" 
                              class="w-full h-full object-cover">
                     </div>
                     
                     <!-- Поле вводу зображення (ImageUploader) -->
                     <div id="image-uploader" class="hidden-item p-4 mt-4 bg-indigo-50 rounded-xl border border-indigo-300 space-y-3">
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center pb-2">
                             <h4 class="font-semibold text-indigo-800 flex items-center">
-                                <i data-lucide="image" class="w-5 h-5 mr-2"></i> Вставити (Ctrl+V)
+                                <i data-lucide="image" class="w-5 h-5 mr-2"></i> Оновлення Зображення
                             </h4>
                             <button id="close-image-uploader" class="text-gray-500 hover:text-gray-700">
                                 <i data-lucide="x-circle" class="w-5 h-5"></i>
                             </button>
                         </div>
                         
-                        <!-- Поле для вставки -->
-                        <div id="paste-area"
-                             tabindex="0" 
-                             class="w-full p-4 h-24 border-2 border-dashed rounded-lg text-center cursor-text transition-all duration-200 bg-white border-gray-300 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <p id="paste-prompt" class="text-gray-500 font-medium mt-2">
-                                Натисніть тут і вставте (Ctrl+V)
-                            </p>
+                        <!-- Опції Завантаження -->
+                        <div class="space-y-3">
+                            <!-- 1. Завантажити з файлу (для телефону/комп'ютера) -->
+                            <label for="file-upload" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed w-full cursor-pointer">
+                                <i data-lucide="upload-cloud" class="w-5 h-5 mr-2"></i>
+                                Завантажити з файлу
+                                <input type="file" id="file-upload" accept="image/*" class="hidden">
+                            </label>
+
+                            <!-- 2. Вставити (Ctrl+V) -->
+                            <p class="text-xs text-indigo-700 font-medium text-center border-t pt-3 border-indigo-200">Або вставте (Ctrl+V) з буфера:</p>
+
+                            <div id="paste-area"
+                                tabindex="0" 
+                                class="w-full p-4 h-24 border-2 border-dashed rounded-lg text-center cursor-text transition-all duration-200 bg-white border-gray-300 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <p id="paste-prompt" class="text-gray-500 font-medium mt-2">
+                                    Натисніть тут і вставте (Ctrl+V)
+                                </p>
+                            </div>
                         </div>
 
                         <!-- Кнопка скидання -->
-                        <button id="remove-image-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full">
+                        <button id="remove-image-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full mt-4">
                             <i data-lucide="trash-2" class="w-5 h-5 mr-2"></i>
                             Скинути фото Пупки
                         </button>
@@ -126,8 +137,8 @@
                 </div>
             </div>
 
-            <!-- Секція Додавання XP (XpInputSection) -->
-            <div class="md:col-span-2">
+            <!-- Секція Додавання XP (XpInputSection) - ЗМІНА РОЗМІРУ: md:col-span-3 -->
+            <div class="md:col-span-3">
                 <div id="xp-section-content" class="bg-white p-6 rounded-2xl shadow-xl space-y-4">
                     <h3 class="text-xl font-bold text-gray-800 flex items-center">
                         <i data-lucide="zap" class="w-6 h-6 mr-2 text-indigo-600"></i> Додати XP за Тренування
@@ -142,7 +153,7 @@
                     </label>
 
                     <!-- Список активностей -->
-                    <div id="rewards-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-2">
+                    <div id="rewards-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-2">
                         <!-- Активності будуть вставлені сюди -->
                     </div>
                     
@@ -227,11 +238,10 @@
             
             <!-- Секція Історії (HistorySection) -->
             <div class="bg-white p-6 rounded-2xl shadow-xl space-y-4 col-span-1 lg:col-span-2" id="history-section-content">
-                <h3 class="text-xl font-bold text-gray-800">Історія Прогресу (Останні 10)</h3>
+                <h3 class="text-xl font-bold text-gray-800">Історія Прогресу (Останні 50)</h3>
                 <div class="max-h-80 overflow-y-auto space-y-2 pr-2" id="history-list">
                     <p class="text-gray-500 italic">Тут відображатимуться ваші дії.</p>
                 </div>
-                <!-- 3. Змінено текст ID -->
                 <p class="text-xs text-center text-gray-400">ID Пупки: <span id="user-id-display">Очікування підключення...</span></p>
             </div>
 
@@ -243,7 +253,6 @@
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4">
             <h3 class="text-xl font-bold text-red-600">Підтвердження Перестворення</h3>
             <p class="text-gray-700">Ви впевнені, що хочете перестворити Пупку?</p>
-            <!-- 4. Оновлено текст модального вікна -->
             <p class="text-sm text-gray-500">Ця дія скине **XP, Здоров'я** та **повністю видалить історію** з хмарної бази. Це не можна скасувати.</p>
             <div class="flex justify-end space-x-3">
                 <button id="cancel-reset-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-gray-500 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -269,7 +278,6 @@
     <div id="loader" class="flex items-center justify-center min-h-screen bg-gray-100 fixed inset-0 z-50">
         <div class="text-indigo-600 text-lg font-semibold flex items-center">
             <i data-lucide="refresh-cw" class="w-6 h-6 mr-3 animate-spin"></i> 
-            <!-- 5. Змінено текст завантажувача -->
             З'єднання з Пупкою через Firebase...
         </div>
     </div>
@@ -278,7 +286,7 @@
     <!-- JavaScript -->
     <script> 
         // --------------------------------------------------------
-        // !!! 6. ДОДАНО ВАШУ КОНФІГУРАЦІЮ FIREBASE !!!
+        // !!! КОНФІГУРАЦІЯ FIREBASE !!!
         // --------------------------------------------------------
         const firebaseConfig = {
             apiKey: "AIzaSyCJp0gKk0gPIDclIIc5rgnH9LGo5G6_768",
@@ -295,7 +303,6 @@
 
 
         // --- КОНСТАНТИ ГРИ ---
-        // (Залишено без змін з вашого файлу)
         const LEVELS = [
           { name: 'Пупка (Початкова Молекула)', minXp: 0, maxXp: 100, description: 'Маленька, але жвава істота' },
           { name: 'Мікроорганізм', minXp: 101, maxXp: 250, description: 'Починає рухатись і світитись' },
@@ -339,9 +346,8 @@
             { id: 'no_circle', name: 'Без "кружечку" (відеозвіту)', health: 0, xp: -10 },
         ];
         
-        const DEFAULT_PUPKA_IMAGE_URL = 'https://placehold.co/112x112/ff9900/ffffff?text=Pupka';
-        // 7. Видалено LOCAL_STORAGE_KEY
-        // const LOCAL_STORAGE_KEY = 'pupkaTrackerState'; 
+        const DEFAULT_PUPKA_IMAGE_URL = 'https://placehold.co/192x192/ff9900/ffffff?text=Pupka';
+        const MAX_IMAGE_SIZE_MB = 5; 
 
         // --- ГЛОБАЛЬНИЙ СТАН ---
         let isDead = false;
@@ -361,11 +367,11 @@
         let hasMultiplier = false;
         let statusMessageTimer = null;
 
-        // --- 8. ДОДАНО FIREBASE ЗМІННІ ---
+        // --- FIREBASE ЗМІННІ ---
         let dbRef;
         let isInitialized = false;
 
-        // --- DOM ЕЛЕМЕНТИ (отримуємо після завантаження DOM) ---
+        // --- DOM ЕЛЕМЕНТИ ---
         let dom = {};
 
         // --- СЕЙФЕРИ/БЛОКУВАННЯ UI ---
@@ -376,7 +382,6 @@
         // --- ДОПОМІЖНІ ФУНКЦІЇ UI ---
 
         function runLucide() {
-            // 9. ДОДАНО TRY...CATCH (за вашим проханням)
             try {
                 if (typeof lucide !== 'undefined' && lucide.createIcons) {
                      lucide.createIcons();
@@ -402,7 +407,6 @@
         }
 
         function showStatusMessage(type, text) {
-            // Ця функція залишається без змін
             if (statusMessageTimer) clearTimeout(statusMessageTimer);
 
             dom.statusAlertText.textContent = text;
@@ -515,7 +519,9 @@
             dom.multiplierLabel.textContent = MULTIPLIER.name;
             dom.multiplierCheckbox.checked = hasMultiplier;
             dom.addXpBtn.disabled = selectedActivities.length === 0 || isSaving || isDead;
-            dom.undoBtn.disabled = !lastActionId || isSaving || isDead;
+            
+            // КОРЕКТНА ПЕРЕВІРКА: Кнопка "Крок назад" активна, якщо є lastActionId І не відбувається збереження
+            dom.undoBtn.disabled = !lastActionId || isSaving;
             
             dom.multiplierCheckbox.onchange = (e) => { 
                 hasMultiplier = e.target.checked; 
@@ -527,6 +533,7 @@
             toggleElement(dom.cprSection, isDead);
             
             if (isDead) {
+                // Блокуємо загальну панель дій, якщо Пупка мертва
                 dom.actionButtonsContainer.classList.add('opacity-50', 'pointer-events-none');
                 toggleElement(dom.healOptions, false);
                 toggleElement(dom.penaltyOptions, false);
@@ -536,9 +543,12 @@
                 dom.actionButtonsContainer.classList.remove('opacity-50', 'pointer-events-none');
             }
             
+            // Кнопка CPR блокується лише під час збереження
             dom.cprBtn.disabled = isSaving;
-            dom.showHealBtn.disabled = isSaving || isDead || health === MAX_HEALTH;
-            dom.showPenaltyBtn.disabled = isSaving || isDead;
+
+            // Кнопки Лікування/Штрафу блокуються, лише якщо isDead (або здоров'я максимальне для лікування).
+            dom.showHealBtn.disabled = isDead || health === MAX_HEALTH;
+            dom.showPenaltyBtn.disabled = isDead;
 
             toggleElement(dom.healOptions, showHealOptions && !isDead);
             toggleElement(dom.penaltyOptions, showPenaltyOptions && !isDead);
@@ -557,7 +567,6 @@
                     : '';
                 const isLastAction = lastActionId === item.id;
                 
-                // 10. Оновлена логіка часу для Firebase (замість localStorage ID)
                 const timestamp = item.timestamp 
                     ? new Date(item.timestamp).toLocaleTimeString('uk-UA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) 
                     : '...';
@@ -586,7 +595,6 @@
         }
 
         function renderAll() {
-            // 11. ДОДАНО TRY...CATCH (за вашим проханням)
             try {
                 renderStatusDisplay();
                 renderXpInputSection();
@@ -611,14 +619,15 @@
                     dom.pasteArea.style.pointerEvents = 'none';
                     dom.removeImageBtn.disabled = true;
                     dom.closeImageUploader.disabled = true;
+                    dom.fileUpload.disabled = true; // Блокуємо завантаження файлом
                 } else {
                     dom.pasteArea.classList.remove('opacity-50', 'cursor-not-allowed');
                     dom.pasteArea.style.pointerEvents = 'auto';
                     dom.removeImageBtn.disabled = isSaving || !characterBase64;
                     dom.closeImageUploader.disabled = false;
+                    dom.fileUpload.disabled = false; // Розблоковуємо завантаження файлом
                 }
 
-                // 12. Оновлено ID
                 dom.userIdDisplay.textContent = PUPKA_ID;
 
             } catch (error) {
@@ -627,16 +636,10 @@
             }
         }
 
-        // --- 13. ЛОГІКА FIREBASE (ЗАМІНА LOCALSTORAGE) ---
-
-        // 13a. Видалено 'loadStateFromLocalStorage'
-        // 13b. Видалено 'saveStateToLocalStorage'
-        // 13c. Видалено 'addHistoryEntry'
+        // --- ЛОГІКА FIREBASE ---
 
         function initFirebase() {
-            // ДОДАНО TRY...CATCH
             try {
-                // Перевірка, чи ключі були вставлені
                 if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("AIzaSy") === false) {
                     showStatusMessage('error', 'Ключі Firebase не налаштовані! Вставте ваші ключі в код.');
                     if (dom.loader) dom.loader.style.display = 'none';
@@ -646,17 +649,13 @@
                 firebase.initializeApp(firebaseConfig);
                 dbRef = firebase.database().ref('pupkas').child(PUPKA_ID);
                 
-                // .on('value') - це слухач, який спрацьовує при першому завантаженні
-                // і при кожній зміні даних у базі
                 dbRef.on('value', (snapshot) => {
                     syncStateFromFirebase(snapshot);
                     if (!isInitialized) {
                         isInitialized = true;
-                        // Перший рендер відбувається тільки після отримання даних
                         renderAll(); 
                     }
                 }, (error) => {
-                    // Ця функція спрацює, якщо правила безпеки забороняють читання
                     console.error("Firebase Read Failed:", error);
                     showStatusMessage('error', 'Не вдалося підключитися до Firebase. Перевірте правила безпеки.');
                     if (dom.loader) dom.loader.style.display = 'none';
@@ -670,12 +669,10 @@
         }
 
         function syncStateFromFirebase(snapshot) {
-            // ДОДАНО TRY...CATCH
             try {
                 const data = snapshot.val();
                 
                 if (!data) {
-                    // Якщо даних немає (перший запуск), ініціалізуємо
                     xp = 0;
                     health = MAX_HEALTH;
                     history = [];
@@ -683,26 +680,22 @@
                     lastActionId = null;
                     isDead = false;
                 } else {
-                    // Оновлюємо глобальний стан
                     xp = data.xp || 0;
                     health = data.health !== undefined && data.health !== null ? data.health : MAX_HEALTH;
                     characterBase64 = data.characterBase64 || '';
                     
                     history = [];
                     if (data.history) {
-                        // Конвертуємо об'єкт Firebase в масив
                         history = Object.keys(data.history).map(key => ({
                             ...data.history[key],
-                            id: key // Використовуємо ключ Firebase як ID дії
-                        })).sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
+                            id: key 
+                        })).sort((a, b) => b.timestamp - a.timestamp).slice(0, 50); 
                     }
                     
                     lastActionId = data.lastActionId || null;
                     isDead = (health <= 0);
                 }
 
-                // Оновлюємо UI, якщо вже ініціалізовано
-                // (при першому запуску це викличе renderAll() в initFirebase)
                 if (isInitialized) {
                      renderAll();
                 }
@@ -711,9 +704,6 @@
                 console.error("Помилка в syncStateFromFirebase:", e);
                 showStatusMessage('error', 'Помилка обробки даних з хмари.');
             } finally {
-                // !!! ЦЕ КЛЮЧОВИЙ ФІКС: 
-                // Приховуємо завантажувач тут, щоб він зник,
-                // навіть якщо renderAll() або syncState() видасть помилку.
                 if (dom.loader) dom.loader.style.display = 'none';
             }
         }
@@ -722,16 +712,14 @@
             if (isSaving || !dbRef) return;
             setIsSaving(true);
             
-            // ДОДАНО TRY...CATCH
+            let newHistoryId = null; // Зберігаємо тут ID нового запису
+
             try {
-                // Отримання поточного стану (щоб уникнути колізій синхронізації)
-                // Ми використовуємо глобальні 'xp' і 'health', які вже синхронізовані
-                
                 let currentHealth = health;
                 
                 let calculatedHealth;
                 if (healthUpdate === 'SET_TO_ONE' && currentHealth <= 0) {
-                    calculatedHealth = 1;
+                    calculatedHealth = 1; 
                 } else if (typeof healthUpdate === 'number') {
                     calculatedHealth = Math.min(MAX_HEALTH, Math.max(0, currentHealth + healthUpdate));
                 } else {
@@ -740,28 +728,29 @@
 
                 const calculatedXp = Math.max(0, xp + xpChange);
                 
-                // Створюємо запис історії
                 const newHistoryEntry = {
                     type: type,
                     details: { xpChange: xpChange, healthChange: healthUpdate, description: description, endHealth: calculatedHealth },
-                    timestamp: firebase.database.ServerValue.TIMESTAMP // Спеціальне значення для Firebase
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
                 };
                 
-                // Відправляємо історію в базу і отримуємо її унікальний ключ
                 const newHistoryRef = dbRef.child('history').push(newHistoryEntry);
-                const newHistoryId = newHistoryRef.key;
+                newHistoryId = newHistoryRef.key; // Отримуємо ключ нового запису
                 
-                // Готуємо оновлення основного стану
                 const updates = {
                     xp: calculatedXp,
                     health: calculatedHealth,
-                    lastActionId: newHistoryId // Зберігаємо ключ останньої дії
+                    lastActionId: newHistoryId 
                 };
 
-                // Виконуємо оновлення
                 await dbRef.update(updates);
                 
-                // (Не потрібно викликати renderAll(), .on('value') зробить це автоматично)
+                // --- ВАЖЛИВА КОРЕКЦІЯ ДЛЯ КНОПКИ "КРОК НАЗАД" ---
+                // Оновлюємо локальний lastActionId після успішного запису
+                // Це гарантує, що кнопка Крок назад буде активна, не чекаючи асинхронної синхронізації
+                lastActionId = newHistoryId; 
+                // ----------------------------------------------------
+
                 showStatusMessage('success', `Успішно оновлено: ${description}`);
                 
             } catch (error) {
@@ -769,6 +758,7 @@
                 showStatusMessage('error', 'Помилка синхронізації з хмарою.');
             } finally {
                 setIsSaving(false);
+                renderAll(); // <-- Примусовий рендер для оновлення стану кнопки Крок назад
             }
         };
 
@@ -780,56 +770,80 @@
              
             setIsSaving(true);
 
-            // ДОДАНО TRY...CATCH
             try {
-                // Отримуємо знімок *один раз*, щоб уникнути умов гонки
                 const snapshot = await dbRef.once('value');
                 const data = snapshot.val();
                 
-                if (!data || !data.history) throw new Error("No data or history found.");
+                if (!data || !data.history) {
+                    showStatusMessage('error', 'Помилка: запис історії не знайдено в хмарі. Скидаю ID останньої дії.');
+                    await dbRef.update({ lastActionId: null }); 
+                    return;
+                }
                 
-                // Знаходимо дію, яку треба скасувати, за її ключем
                 const entryToUndo = data.history[lastActionId];
                 
                 if (!entryToUndo) {
-                    showStatusMessage('error', 'Помилка: запис історії для відміни не знайдено в хмарі.');
-                    await dbRef.update({ lastActionId: null }); // Скидаємо, якщо ID невірний
+                    showStatusMessage('error', 'Помилка: запис історії для відміни не знайдено в хмарі. Скидаю ID останньої дії.');
+                    await dbRef.update({ lastActionId: null }); 
                     return;
                 }
                 
                 const details = entryToUndo.details || {};
+                
+                if (details.healthChange === 'SET_TO_ONE') {
+                    showStatusMessage('error', 'Відміна «Штучного дихання» (CPR) не підтримується.');
+                    return;
+                }
+                
+                // 1. РОЗРАХУНОК НОВИХ XP/ЗДОРОВ'Я
                 const undoneXpChange = details.xpChange ? -details.xpChange : 0;
                 let undoneHealthChange = 0;
                 
                 if (typeof details.healthChange === 'number') {
                     undoneHealthChange = -details.healthChange;
-                } else if (details.healthChange === 'SET_TO_ONE') {
-                    showStatusMessage('error', 'Відміна «Штучного дихання» (CPR) не підтримується.');
-                    return; // Виходимо, не знімаючи isSaving
                 }
                 
-                // Використовуємо поточний стан з data
                 const newXp = Math.max(0, (data.xp || 0) + undoneXpChange);
                 const currentHealth = (data.health !== undefined && data.health !== null) ? data.health : MAX_HEALTH;
                 const newHealth = Math.min(MAX_HEALTH, Math.max(0, currentHealth + undoneHealthChange));
                 
-                // Готуємо "атомне" оновлення: видаляємо історію та оновлюємо стан
+                // 2. ПОШУК НОВОГО lastActionId (МУЛЬТИ-КРОК НАЗАД)
+                const historyKeys = Object.keys(data.history)
+                    .filter(key => key !== lastActionId);
+
+                let newLastActionId = null;
+
+                if (historyKeys.length > 0) {
+                    const sortedHistory = historyKeys
+                        .map(key => ({
+                            id: key,
+                            timestamp: data.history[key].timestamp || 0 
+                        }))
+                        .sort((a, b) => b.timestamp - a.timestamp); 
+                    
+                    newLastActionId = sortedHistory[0].id;
+                }
+                
+                // 3. АТОМНЕ ОНОВЛЕННЯ FIREBASE
                 const updates = {};
-                updates[`history/${lastActionId}`] = null; // Видалення запису історії
+                updates[`history/${lastActionId}`] = null; 
                 updates['xp'] = newXp;
                 updates['health'] = newHealth;
-                updates['lastActionId'] = null; // Очищаємо ID останньої дії
+                updates['lastActionId'] = newLastActionId; 
 
                 await dbRef.update(updates);
                 
-                showStatusMessage('success', `Дія успішно відмінена: ${details.description || 'невідома дія'}`);
+                // 4. ЛОКАЛЬНЕ ОНОВЛЕННЯ СТАНУ (для миттєвої реакції кнопки "Крок назад" до синхронізації)
+                lastActionId = newLastActionId; 
+
+                showStatusMessage('success', `Дія успішно відмінена: ${details.description || entryToUndo.type}`);
                 
             } catch (e) {
                 console.error("Помилка відміни:", e);
                 showStatusMessage('error', 'Помилка відміни дії.');
             } finally {
-                setIsSaving(false);
-                // (renderAll() викличеться автоматично)
+                setIsSaving(false); 
+                renderAll(); 
             }
         };
 
@@ -843,9 +857,7 @@
             setIsSaving(true);
             showStatusMessage('info', 'Зберігаю зображення...');
 
-            // ДОДАНО TRY...CATCH
             try {
-                // Оновлюємо лише поле characterBase64
                 await dbRef.update({ characterBase64: base64 });
                 showStatusMessage('success', 'Зображення Пупки успішно оновлено!');
             } catch (error) {
@@ -855,12 +867,10 @@
                 setIsSaving(false);
                 toggleElement(dom.imageUploader, false);
                 showImageInput = false;
-                // (renderAll() викличеться автоматично)
             }
         };
 
         function handleRemoveImage() {
-            // Ця функція не змінюється
             if (isDead) {
                 showStatusMessage('warning', 'Пупка мертва. Не можна міняти фото!');
                 return;
@@ -877,20 +887,17 @@
             setButton(dom.confirmResetBtn, { text: 'Скидаю...', disabled: true });
             dom.cancelResetBtn.disabled = true;
 
-            // ДОДАНО TRY...CATCH
             try {
-                // Готуємо повний об'єкт для скидання
                 const updates = {
                     xp: 0,
                     health: MAX_HEALTH,
                     characterBase64: '',
                     lastActionId: null,
-                    history: null // Повне видалення історії
+                    history: null 
                 };
 
-                await dbRef.set(updates); // .set() повністю перезаписує дані
+                await dbRef.set(updates); 
                 
-                // Локально скидаємо UI
                 selectedActivities = [];
                 hasMultiplier = false;
                 showHealOptions = false;
@@ -907,11 +914,10 @@
                 setIsSaving(false);
                 setButton(dom.confirmResetBtn, { text: 'Перестворити', disabled: false });
                 dom.cancelResetBtn.disabled = false;
-                // (renderAll() викличеться автоматично)
             }
         };
 
-        // --- ЛОГІКА XP (не змінюється, викликає updateGameState) ---
+        // --- ЛОГІКА XP ---
 
         const handleXPUpdate = () => {
             if (isDead) {
@@ -934,7 +940,6 @@
 
             const description = `${selectedActivities.map(id => REWARDS.find(r => r.id === id)?.name || id).join(', ')}` + (hasMultiplier ? ` (×${MULTIPLIER.factor})` : '');
 
-            // Викликаємо оновлену функцію Firebase
             updateGameState(totalXP, 0, `Отримано XP: +${totalXP}. Активності: ${description}`, 'update');
 
             // Скидаємо UI локально для миттєвого відгуку
@@ -954,7 +959,7 @@
             renderXpInputSection();
         };
 
-        // --- ЛОГІКА ЗДОРОВ'Я (не змінюється, викликає updateGameState) ---
+        // --- ЛОГІКА ЗДОРОВ'Я ---
 
         const handleHealthChange = (healthChange, xpChange, actionName, type) => {
             if (isDead && healthChange <= 0) { 
@@ -966,10 +971,8 @@
                 return;
             }
             
-            // Викликаємо оновлену функцію Firebase
             updateGameState(xpChange, healthChange, `${actionName}: ${healthChange > 0 ? '+' : ''}${healthChange} ❤️${xpChange !== 0 ? `, ${xpChange > 0 ? '+' : ''}${xpChange} XP` : ''}`, type);
             
-            // Скидаємо UI локально
             showHealOptions = false;
             showPenaltyOptions = false;
             renderActionButtons();
@@ -977,12 +980,55 @@
 
         const handleCPR = () => {
             if (!isDead) return; 
-            // Викликаємо оновлену функцію Firebase
             updateGameState(0, 'SET_TO_ONE', 'Опція «Штучне дихання» (42 км за 2 дні) виконана. Пупка ожила, але виснажена.', 'heal');
         };
         
-        // --- ЛОГІКА IMAGE UPLOADER (не змінюється) ---
+        // --- ЛОГІКА IMAGE UPLOADER ---
         
+        const fileToBase64 = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        };
+
+        const checkFileSize = (file) => {
+            const maxSize = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+            if (file.size > maxSize) {
+                showStatusMessage('error', `Зображення занадто велике (> ${MAX_IMAGE_SIZE_MB}МБ). Спробуйте менше.`);
+                return false;
+            }
+            return true;
+        }
+
+        // Завантаження файлом (з телефону/комп'ютера)
+        const handleFileUpload = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!checkFileSize(file)) return;
+
+            dom.pastePrompt.textContent = 'Обробляю зображення...';
+            dom.pasteArea.classList.add('bg-indigo-200', 'border-indigo-600');
+            showStatusMessage('info', 'Обробляю зображення... ');
+
+            try {
+                const base64Data = await fileToBase64(file);
+                await handleSaveBase64(base64Data);
+            } catch (error) {
+                console.error("Помилка при конвертації Base64:", error);
+                showStatusMessage('error', 'Помилка при обробці зображення.');
+            } finally {
+                dom.pastePrompt.textContent = 'Натисніть тут і вставте (Ctrl+V)';
+                dom.pasteArea.classList.remove('bg-indigo-200', 'border-indigo-600');
+                dom.fileUpload.value = ''; // Скидаємо ввід файлу
+            }
+        };
+
+
+        // Завантаження через буфер обміну (Ctrl+V)
         const handlePaste = async (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -1007,13 +1053,12 @@
             }
 
             if (imageFile) {
-                // 15. Перевірка розміру (Firebase RTDB має обмеження ~10MB, але краще менше)
-                if (imageFile.size > 2 * 1024 * 1024) { // 2MB
-                    showStatusMessage('error', 'Зображення занадто велике ( > 2МБ). Спробуйте менше.');
+                if (!checkFileSize(imageFile)) {
+                     // Розмір не відповідає ліміту, вийдемо
                 } else {
                     try {
                         const base64Data = await fileToBase64(imageFile);
-                        await handleSaveBase64(base64Data); // Змінено на async
+                        await handleSaveBase64(base64Data);
                     } catch (error) {
                         console.error("Помилка при конвертації Base64:", error);
                         showStatusMessage('error', 'Помилка при обробці зображення.');
@@ -1027,19 +1072,9 @@
             dom.pasteArea.classList.remove('bg-indigo-200', 'border-indigo-600');
         };
         
-        const fileToBase64 = (file) => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-                reader.readAsDataURL(file);
-            });
-        };
-
         // --- ІНІЦІАЛІЗАЦІЯ UI ТА ПОДІЙ ---
 
         function initUI() {
-            // Заповнення статичних, але динамічно генерованих списків
             
             // Heal Tasks
             dom.healTasksList.innerHTML = '';
@@ -1047,7 +1082,6 @@
                 const button = document.createElement('button');
                 button.className = "flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-pink-500 hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed w-full";
                 button.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5 mr-2"></i> ${task.name}`;
-                // Виправлено: handleHealthChange(healthChange, xpChange, ...)
                 button.onclick = () => handleHealthChange(1, 0, `Лікування: ${task.name}`, 'heal');
                 dom.healTasksList.appendChild(button);
             });
@@ -1058,14 +1092,13 @@
                 const button = document.createElement('button');
                 button.className = "flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full";
                 button.innerHTML = `<i data-lucide="x-circle" class="w-5 h-5 mr-2"></i> ${penalty.name} (${penalty.health ? penalty.health + ' ❤️' : ''} ${penalty.xp ? (penalty.xp > 0 ? '+' : '') + penalty.xp + ' XP' : ''})`;
-                // Виправлено: handleHealthChange(healthChange, xpChange, ...)
                 button.onclick = () => handleHealthChange(penalty.health, penalty.xp, `Штраф: ${penalty.name}`, 'penalty');
                 dom.penaltyTasksList.appendChild(button);
             });
             
             runLucide();
 
-            // Прив'язка подій
+            // Прив'язка подій Image Uploader
             dom.imageContainer.onclick = () => {
                 if (!isDead) {
                     showImageInput = !showImageInput;
@@ -1079,6 +1112,7 @@
             };
             dom.pasteArea.onpaste = handlePaste;
             dom.removeImageBtn.onclick = handleRemoveImage;
+            dom.fileUpload.onchange = handleFileUpload; // Додано обробник для завантаження файлом
 
             // XP (Ключові елементи)
             dom.addXpBtn.onclick = handleXPUpdate;
@@ -1088,12 +1122,12 @@
             dom.cprBtn.onclick = handleCPR;
             dom.showHealBtn.onclick = () => {
                 showHealOptions = !showHealOptions;
-                showPenaltyOptions = false; // Закриваємо іншу панель
+                showPenaltyOptions = false; 
                 renderActionButtons();
             };
             dom.showPenaltyBtn.onclick = () => {
                 showPenaltyOptions = !showPenaltyOptions;
-                showHealOptions = false; // Закриваємо іншу панель
+                showHealOptions = false; 
                 renderActionButtons();
             };
             dom.closeHealBtn.onclick = () => { showHealOptions = false; renderActionButtons(); };
@@ -1125,6 +1159,7 @@
                 pasteArea: document.getElementById('paste-area'),
                 pastePrompt: document.getElementById('paste-prompt'),
                 removeImageBtn: document.getElementById('remove-image-btn'),
+                fileUpload: document.getElementById('file-upload'),
                 levelPrefix: document.getElementById('level-prefix'),
                 levelName: document.getElementById('level-name'),
                 levelDescription: document.getElementById('level-description'),
@@ -1164,17 +1199,10 @@
             // 2. Ініціалізувати UI (події, статичні списки)
             initUI();
             
-            // 3. ЗАМІНЕНО 'loadStateFromLocalStorage()' НА 'initFirebase()'
+            // 3. Ініціалізувати Firebase
             initFirebase();
-            
-            // 4. ВИДАЛЕНО приховування завантажувача
-            // if (dom.loader) dom.loader.style.display = 'none';
-            
-            // 5. ВИДАЛЕНО перший рендер
-            // renderAll();
         });
         
     </script>
 </body>
 </html>
-
