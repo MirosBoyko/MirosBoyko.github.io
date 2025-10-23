@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pupka Tracker (localStorage)</title>
+    <title>Pupka Tracker (GitHub Pages)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -67,10 +67,9 @@
                          role="button"
                          aria-label="Змінити зображення Пупки">
                         <img id="pupka-image"
-                             src="image_915fcc.jpg" 
+                             src="https://placehold.co/112x112/ff9900/ffffff?text=Pupka" 
                              alt="Pupka Character" 
-                             class="w-full h-full object-cover"
-                             onerror="this.onerror=null; this.src='https://placehold.co/112x112/ff9900/ffffff?text=Pupka'; this.className='w-full h-full object-contain p-2';">
+                             class="w-full h-full object-cover">
                     </div>
                     
                     <!-- Поле вводу зображення (ImageUploader) -->
@@ -268,7 +267,7 @@
 
 
     <!-- JavaScript -->
-    <script type(="module")> // 'type="module"' видалено, оскільки Firebase не використовується
+    <script> 
         // --- КОНСТАНТИ ГРИ ---
         const LEVELS = [
           { name: 'Пупка (Початкова Молекула)', minXp: 0, maxXp: 100, description: 'Маленька, але жвава істота' },
@@ -313,14 +312,13 @@
             { id: 'no_circle', name: 'Без "кружечку" (відеозвіту)', health: 0, xp: -10 },
         ];
         
-        const DEFAULT_PUPKA_IMAGE_URL = 'image_915fcc.jpg';
+        // Змінено на віддалену заглушку, щоб уникнути помилок з локальними файлами на GitHub Pages
+        const DEFAULT_PUPKA_IMAGE_URL = 'https://placehold.co/112x112/ff9900/ffffff?text=Pupka';
         const LOCAL_STORAGE_KEY = 'pupkaTrackerState';
 
         // --- ГЛОБАЛЬНИЙ СТАН ---
         let isDead = false;
-        let isSaving = false; // Використовуємо для блокування UI під час швидких операцій
-
-        // Стан гри (завантажимо з localStorage)
+        let isSaving = false;
         let xp = 0;
         let health = MAX_HEALTH;
         let history = [];
@@ -339,8 +337,25 @@
         // --- DOM ЕЛЕМЕНТИ (отримуємо після завантаження DOM) ---
         let dom = {};
 
+        // --- СЕЙФЕРИ/БЛОКУВАННЯ UI ---
+        function setIsSaving(saving) {
+            isSaving = saving;
+            // Додатково можна тут додати клас 'cursor-wait' до body, якщо потрібно
+        }
+        
         // --- ДОПОМІЖНІ ФУНКЦІЇ UI ---
 
+        function runLucide() {
+            try {
+                // Запуск рендерингу іконок. Якщо він не спрацює, він не зламає основну логіку.
+                if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                     lucide.createIcons();
+                }
+            } catch (e) {
+                console.warn("Помилка рендерингу іконок Lucide. UI може бути неповним.", e);
+            }
+        }
+        
         function toggleElement(el, show) {
             if (show) {
                 el.classList.remove('hidden-item');
@@ -389,7 +404,7 @@
             iconEl.className = `w-5 h-5 mr-3 ${type === 'info' ? 'animate-spin' : ''}`;
             dom.statusAlertIconContainer.innerHTML = '';
             dom.statusAlertIconContainer.appendChild(iconEl);
-            lucide.createIcons();
+            runLucide();
 
             statusMessageTimer = setTimeout(() => {
                 toggleElement(dom.statusAlert, false);
@@ -406,13 +421,17 @@
                 heart.className = `w-6 h-6 transition-colors duration-300 ${i < health ? 'fill-red-500 text-red-500' : 'fill-gray-300 text-gray-400'}`;
                 dom.heartDisplay.appendChild(heart);
             }
-            lucide.createIcons();
+            runLucide();
         }
 
         function renderStatusDisplay() {
             renderHeartDisplay();
             
+            // Використовуємо Base64, або default URL, якщо Base64 порожній
             dom.pupkaImage.src = characterBase64 || DEFAULT_PUPKA_IMAGE_URL;
+            dom.pupkaImage.classList.remove('object-contain', 'p-2');
+            dom.pupkaImage.classList.add('object-cover');
+            
             dom.removeImageBtn.disabled = isSaving || !characterBase64 || isDead;
 
             const currentLevel = LEVELS.find(l => xp >= l.minXp && xp <= l.maxXp) || LEVELS[0];
@@ -447,7 +466,7 @@
             // Оновлення списку активностей
             dom.rewardsList.innerHTML = '';
             REWARDS.forEach(reward => {
-                let rewardName = (reward.id === 'yoga') ? '🧘 Розтяжка / Йога (30 хв)' : reward.name;
+                let rewardName = reward.name;
                 
                 const isSelected = selectedActivities.includes(reward.id);
                 const div = document.createElement('div');
@@ -460,14 +479,21 @@
                     <div class="font-medium text-gray-700">${rewardName}</div>
                     <div class="text-sm font-bold ${reward.isBonus ? 'text-green-600' : 'text-indigo-600'}">+${reward.xp} XP</div>
                 `;
+                // **Це ключовий елемент, який повинен працювати**
                 div.onclick = () => toggleActivity(reward.id);
                 dom.rewardsList.appendChild(div);
             });
 
-            // Оновлення кнопок
+            // Оновлення X2 множника та кнопок
+            dom.multiplierLabel.textContent = MULTIPLIER.name;
             dom.multiplierCheckbox.checked = hasMultiplier;
             dom.addXpBtn.disabled = selectedActivities.length === 0 || isSaving || isDead;
             dom.undoBtn.disabled = !lastActionId || isSaving || isDead;
+            
+            dom.multiplierCheckbox.onchange = (e) => { 
+                hasMultiplier = e.target.checked; 
+                renderXpInputSection(); // Оновлюємо, щоб відобразити стан кнопки XP
+            };
         }
 
         function renderActionButtons() {
@@ -477,7 +503,6 @@
             // Блокування кнопок, якщо мертвий
             if (isDead) {
                 dom.actionButtonsContainer.classList.add('opacity-50', 'pointer-events-none');
-                // Сховати відкриті опції
                 toggleElement(dom.healOptions, false);
                 toggleElement(dom.penaltyOptions, false);
                 showHealOptions = false;
@@ -490,8 +515,6 @@
             dom.cprBtn.disabled = isSaving;
             dom.showHealBtn.disabled = isSaving || isDead || health === MAX_HEALTH;
             dom.showPenaltyBtn.disabled = isSaving || isDead;
-
-            // (Списки завдань і штрафів генеруються один раз в initUI)
 
             // Стан видимості
             toggleElement(dom.healOptions, showHealOptions && !isDead);
@@ -510,7 +533,6 @@
                     ? ` (${item.details.endHealth}/${MAX_HEALTH} ❤️)`
                     : '';
                 const isLastAction = lastActionId === item.id;
-                // Використовуємо .timestamp (який є рядком Date.now())
                 const timestamp = item.timestamp 
                     ? new Date(parseInt(item.timestamp.split('_')[0])).toLocaleTimeString('uk-UA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) 
                     : '...';
@@ -535,41 +557,47 @@
                 `;
                 dom.historyList.appendChild(div);
             });
-            lucide.createIcons();
+            runLucide();
         }
 
         function renderAll() {
-            renderStatusDisplay();
-            renderXpInputSection();
-            renderActionButtons();
-            renderHistory();
-            
-            // Глобальне блокування UI
-            const uiSections = [dom.xpSectionContent, dom.actionButtonsContainer, dom.historySectionContent, dom.imageContainer];
-            if (isDead) {
-                uiSections.forEach(el => el.classList.add('ui-blocked'));
-                dom.imageContainer.classList.add('opacity-70', 'cursor-not-allowed');
-                dom.imageContainer.classList.remove('hover:scale-105', 'cursor-pointer');
-            } else {
-                uiSections.forEach(el => el.classList.remove('ui-blocked'));
-                 dom.imageContainer.classList.remove('opacity-70', 'cursor-not-allowed');
-                 dom.imageContainer.classList.add('hover:scale-105', 'cursor-pointer');
-            }
-            
-            // Специфічне блокування для ImageUploader
-            if (isDead) {
-                dom.pasteArea.classList.add('opacity-50', 'cursor-not-allowed');
-                dom.pasteArea.style.pointerEvents = 'none';
-                dom.removeImageBtn.disabled = true;
-                dom.closeImageUploader.disabled = true;
-            } else {
-                dom.pasteArea.classList.remove('opacity-50', 'cursor-not-allowed');
-                dom.pasteArea.style.pointerEvents = 'auto';
-                dom.removeImageBtn.disabled = isSaving || !characterBase64;
-                 dom.closeImageUploader.disabled = false;
-            }
+            try {
+                renderStatusDisplay();
+                renderXpInputSection();
+                renderActionButtons();
+                renderHistory();
+                
+                // Глобальне блокування UI
+                const uiSections = [dom.xpSectionContent, dom.actionButtonsContainer, dom.historySectionContent, dom.imageContainer];
+                const blockClass = 'ui-blocked';
+                
+                if (isDead) {
+                    uiSections.forEach(el => el.classList.add(blockClass));
+                    dom.imageContainer.classList.add('opacity-70', 'cursor-not-allowed');
+                    dom.imageContainer.classList.remove('hover:scale-105', 'cursor-pointer');
+                } else {
+                    uiSections.forEach(el => el.classList.remove(blockClass));
+                     dom.imageContainer.classList.remove('opacity-70', 'cursor-not-allowed');
+                     dom.imageContainer.classList.add('hover:scale-105', 'cursor-pointer');
+                }
+                
+                if (isDead) {
+                    dom.pasteArea.classList.add('opacity-50', 'cursor-not-allowed');
+                    dom.pasteArea.style.pointerEvents = 'none';
+                    dom.removeImageBtn.disabled = true;
+                    dom.closeImageUploader.disabled = true;
+                } else {
+                    dom.pasteArea.classList.remove('opacity-50', 'cursor-not-allowed');
+                    dom.pasteArea.style.pointerEvents = 'auto';
+                    dom.removeImageBtn.disabled = isSaving || !characterBase64;
+                    dom.closeImageUploader.disabled = false;
+                }
 
-            dom.userIdDisplay.textContent = 'місцевий-користувач';
+                dom.userIdDisplay.textContent = 'місцевий-користувач';
+            } catch (error) {
+                 console.error("Критична помилка рендерингу в renderAll:", error);
+                 showStatusMessage('error', 'Критична помилка UI. Перезавантажте сторінку.');
+            }
         }
 
         // --- ЛОГІКА LOCALSTORAGE ---
@@ -580,14 +608,12 @@
                 if (savedState) {
                     const state = JSON.parse(savedState);
                     xp = state.xp || 0;
-                    // Перевірка на null/undefined для здоров'я
                     health = (state.health !== undefined && state.health !== null) ? state.health : MAX_HEALTH;
                     characterBase64 = state.characterBase64 || '';
                     history = state.history || [];
                     lastActionId = state.lastActionId || null;
                     isDead = (health <= 0);
                 } else {
-                    // Встановлення значень за замовчуванням, якщо нічого не збережено
                     xp = 0;
                     health = MAX_HEALTH;
                     history = [];
@@ -597,13 +623,8 @@
                 }
             } catch (e) {
                 console.error("Помилка завантаження стану з localStorage:", e);
-                // Скидання до стану за замовчуванням у разі помилки
-                xp = 0;
-                health = MAX_HEALTH;
-                history = [];
-                characterBase64 = '';
-                lastActionId = null;
-                isDead = false;
+                xp = 0; health = MAX_HEALTH; history = []; characterBase64 = ''; lastActionId = null; isDead = false;
+                showStatusMessage('error', 'Помилка завантаження даних. Скинуто до початкового стану.');
             }
         }
 
@@ -620,20 +641,16 @@
         // --- ЛОГІКА ГРИ ---
 
         function addHistoryEntry(type, details, endHealth) {
-            // Створення унікального ID
             const newHistoryId = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 9);
             
             const newEntry = {
                 id: newHistoryId,
                 type: type,
                 details: { ...details, endHealth },
-                timestamp: newHistoryId // Використовуємо ID як мітку часу
+                timestamp: newHistoryId
             };
             
-            // Додаємо на початок
             history.unshift(newEntry);
-            
-            // Обмежуємо історію
             history = history.slice(0, 10);
             
             return newHistoryId;
@@ -643,9 +660,7 @@
             if (isSaving) return;
             setIsSaving(true);
             
-            // 1. Розрахунок нового стану
             let currentHealth = health;
-            let currentXp = xp;
             
             let calculatedHealth;
             if (healthUpdate === 'SET_TO_ONE' && currentHealth <= 0) {
@@ -656,14 +671,12 @@
                 calculatedHealth = currentHealth;
             }
 
-            const calculatedXp = Math.max(0, currentXp + xpChange);
+            const calculatedXp = Math.max(0, xp + xpChange);
             
-            // 2. Оновлення глобальних змінних
             xp = calculatedXp;
             health = calculatedHealth;
             isDead = (health <= 0);
 
-            // 3. Додавання історії
             const newHistoryId = addHistoryEntry(type, { 
                 xpChange: xpChange, 
                 healthChange: healthUpdate, 
@@ -672,9 +685,7 @@
             
             lastActionId = newHistoryId;
 
-            // 4. Збереження та Рендер
             saveStateToLocalStorage();
-            console.log("Стан гри оновлено та збережено.");
             
             setIsSaving(false);
             renderAll();
@@ -693,7 +704,7 @@
                 
                 if (!entryToUndo) {
                     showStatusMessage('error', 'Помилка: запис історії не знайдено.');
-                    lastActionId = null; // Очищення недійсного ID
+                    lastActionId = null;
                     saveStateToLocalStorage();
                     setIsSaving(false);
                     renderAll();
@@ -714,15 +725,11 @@
                     return;
                 }
                 
-                // Розрахунок нового стану
                 xp = Math.max(0, xp + undoneXpChange);
                 health = Math.min(MAX_HEALTH, Math.max(0, health + undoneHealthChange));
                 isDead = (health <= 0);
                 
-                // Видалення запису з історії
                 history = history.filter(item => item.id !== lastActionId);
-                
-                // Очищення lastActionId (оскільки дія скасована)
                 lastActionId = null; 
                 
                 saveStateToLocalStorage();
@@ -763,7 +770,7 @@
                 showStatusMessage('warning', 'Пупка мертва. Не можна міняти фото!');
                 return;
             }
-            handleSaveBase64(''); // Зберегти порожній рядок
+            handleSaveBase64(''); 
             toggleElement(dom.imageUploader, false);
             showImageInput = false;
         };
@@ -776,7 +783,6 @@
             dom.cancelResetBtn.disabled = true;
 
             try {
-                // Скидання глобального стану
                 xp = 0;
                 health = MAX_HEALTH;
                 characterBase64 = '';
@@ -784,11 +790,8 @@
                 history = [];
                 isDead = false;
 
-                saveStateToLocalStorage(); // Збереження порожнього стану
+                saveStateToLocalStorage();
                 
-                console.log("Персонаж успішно перестворений.");
-                
-                // Скидання стану UI
                 selectedActivities = [];
                 hasMultiplier = false;
                 showHealOptions = false;
@@ -816,7 +819,10 @@
                 showStatusMessage('warning', 'Пупка мертва. Потрібне «Штучне дихання»!');
                 return;
             }
-            if (selectedActivities.length === 0) return;
+            if (selectedActivities.length === 0) {
+                 showStatusMessage('warning', 'Оберіть хоча б одну активність, щоб додати XP.');
+                 return;
+            }
 
             let totalXP = selectedActivities.reduce((sum, activityId) => {
                 const reward = REWARDS.find(r => r.id === activityId);
@@ -831,9 +837,9 @@
 
             updateGameState(totalXP, 0, `Отримано XP: +${totalXP}. Активності: ${description}`, 'update');
 
+            // Скидання стану після успішного оновлення
             selectedActivities = [];
             hasMultiplier = false;
-            // renderAll() буде викликано всередині updateGameState
         };
 
         const toggleActivity = (id) => {
@@ -844,7 +850,7 @@
             } else {
                 selectedActivities.push(id);
             }
-            renderXpInputSection(); // Оновити лише цю секцію
+            renderXpInputSection();
         };
 
         // --- ЛОГІКА ЗДОРОВ'Я ---
@@ -854,10 +860,14 @@
                 showStatusMessage('warning', 'Пупка мертва. Більше штрафів накладати не можна.');
                 return;
             }
+            if (healthChange > 0 && health === MAX_HEALTH) {
+                showStatusMessage('info', 'Здоров\'я повне. Лікування не потрібне.');
+                return;
+            }
+            
             updateGameState(xpChange, healthChange, `${actionName}: ${healthChange > 0 ? '+' : ''}${healthChange} ❤️${xpChange !== 0 ? `, ${xpChange > 0 ? '+' : ''}${xpChange} XP` : ''}`, type);
             showHealOptions = false;
             showPenaltyOptions = false;
-            // renderAll() буде викликано всередині updateGameState
         };
 
         const handleCPR = () => {
@@ -891,12 +901,12 @@
             }
 
             if (imageFile) {
-                if (imageFile.size > 1024 * 1024) { // 1МБ
+                if (imageFile.size > 1024 * 1024) { 
                     showStatusMessage('error', 'Зображення занадто велике ( > 1МБ). Спробуйте менше.');
                 } else {
                     try {
                         const base64Data = await fileToBase64(imageFile);
-                        await handleSaveBase64(base64Data); // handleSaveBase64 тепер синхронна, але 'await' не зашкодить
+                        handleSaveBase64(base64Data);
                     } catch (error) {
                         console.error("Помилка при конвертації Base64:", error);
                         showStatusMessage('error', 'Помилка при обробці зображення.');
@@ -915,7 +925,7 @@
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
                 reader.onerror = error => reject(error);
-                reader.readDataURL(file);
+                reader.readAsDataURL(file);
             });
         };
 
@@ -924,9 +934,6 @@
         function initUI() {
             // Заповнення статичних, але динамічно генерованих списків
             
-            // X2 Multiplier
-            dom.multiplierLabel.textContent = MULTIPLIER.name;
-
             // Heal Tasks
             dom.healTasksList.innerHTML = '';
             HEALING_TASKS.forEach(task => {
@@ -947,12 +954,9 @@
                 dom.penaltyTasksList.appendChild(button);
             });
             
-            // Рендер іконок, доданих вище
-            lucide.createIcons();
+            runLucide();
 
             // Прив'язка подій
-            
-            // Status
             dom.imageContainer.onclick = () => {
                 if (!isDead) {
                     showImageInput = !showImageInput;
@@ -967,8 +971,7 @@
             dom.pasteArea.onpaste = handlePaste;
             dom.removeImageBtn.onclick = handleRemoveImage;
 
-            // XP
-            dom.multiplierCheckbox.onchange = (e) => { hasMultiplier = e.target.checked; };
+            // XP (Ключові елементи)
             dom.addXpBtn.onclick = handleXPUpdate;
             dom.undoBtn.onclick = handleUndoLastAction;
 
@@ -1054,7 +1057,7 @@
             loadStateFromLocalStorage();
             
             // 4. Сховати завантажувач
-            dom.loader.style.display = 'none';
+            if (dom.loader) dom.loader.style.display = 'none';
             
             // 5. Перший рендер
             renderAll();
