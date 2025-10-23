@@ -2,12 +2,17 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pupka Tracker (GitHub Pages)</title>
+    <meta name="viewport" content="width=device-width, initial-scale1.0">
+    <!-- 1. Змінено Title -->
+    <title>Pupka Tracker (Firebase Sync)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- 2. Додано Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
     
     <style>
         /* Стилі для плавної появи/зникнення */
@@ -226,7 +231,8 @@
                 <div class="max-h-80 overflow-y-auto space-y-2 pr-2" id="history-list">
                     <p class="text-gray-500 italic">Тут відображатимуться ваші дії.</p>
                 </div>
-                <p class="text-xs text-center text-gray-400">ID Користувача: <span id="user-id-display">місцевий-користувач</span> (Дані у браузері)</p>
+                <!-- 3. Змінено текст ID -->
+                <p class="text-xs text-center text-gray-400">ID Пупки: <span id="user-id-display">Очікування підключення...</span></p>
             </div>
 
         </div>
@@ -237,7 +243,8 @@
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4">
             <h3 class="text-xl font-bold text-red-600">Підтвердження Перестворення</h3>
             <p class="text-gray-700">Ви впевнені, що хочете перестворити Пупку?</p>
-            <p class="text-sm text-gray-500">Ця дія скине **XP, Здоров'я** та **повністю видалить історію**. Це не можна скасувати.</p>
+            <!-- 4. Оновлено текст модального вікна -->
+            <p class="text-sm text-gray-500">Ця дія скине **XP, Здоров'я** та **повністю видалить історію** з хмарної бази. Це не можна скасувати.</p>
             <div class="flex justify-end space-x-3">
                 <button id="cancel-reset-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-gray-500 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
                     Скасувати
@@ -261,14 +268,34 @@
     <!-- Завантажувач (Loader) -->
     <div id="loader" class="flex items-center justify-center min-h-screen bg-gray-100 fixed inset-0 z-50">
         <div class="text-indigo-600 text-lg font-semibold flex items-center">
-            <i data-lucide="refresh-cw" class="w-6 h-6 mr-3 animate-spin"></i> Завантаження Пупки...
+            <i data-lucide="refresh-cw" class="w-6 h-6 mr-3 animate-spin"></i> 
+            <!-- 5. Змінено текст завантажувача -->
+            З'єднання з Пупкою через Firebase...
         </div>
     </div>
 
 
     <!-- JavaScript -->
     <script> 
+        // --------------------------------------------------------
+        // !!! 6. ДОДАНО ВАШУ КОНФІГУРАЦІЮ FIREBASE !!!
+        // --------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJp0gKk0gPIDclIIc5rgnH9LGo5G6_768",
+            authDomain: "pupka-game.firebaseapp.com",
+            databaseURL: "https://pupka-game-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "pupka-game",
+            storageBucket: "pupka-game.firebasestorage.app",
+            messagingSenderId: "672252683379",
+            appId: "1:672252683379:web:af9a12a470509805517606"
+        };
+        // Унікальний ID для цієї конкретної Пупки (спільний для всіх користувачів)
+        const PUPKA_ID = "GLOBAL_PUPKA_TRACKER";
+        // --------------------------------------------------------
+
+
         // --- КОНСТАНТИ ГРИ ---
+        // (Залишено без змін з вашого файлу)
         const LEVELS = [
           { name: 'Пупка (Початкова Молекула)', minXp: 0, maxXp: 100, description: 'Маленька, але жвава істота' },
           { name: 'Мікроорганізм', minXp: 101, maxXp: 250, description: 'Починає рухатись і світитись' },
@@ -312,9 +339,9 @@
             { id: 'no_circle', name: 'Без "кружечку" (відеозвіту)', health: 0, xp: -10 },
         ];
         
-        // Змінено на віддалену заглушку, щоб уникнути помилок з локальними файлами на GitHub Pages
         const DEFAULT_PUPKA_IMAGE_URL = 'https://placehold.co/112x112/ff9900/ffffff?text=Pupka';
-        const LOCAL_STORAGE_KEY = 'pupkaTrackerState';
+        // 7. Видалено LOCAL_STORAGE_KEY
+        // const LOCAL_STORAGE_KEY = 'pupkaTrackerState'; 
 
         // --- ГЛОБАЛЬНИЙ СТАН ---
         let isDead = false;
@@ -334,25 +361,28 @@
         let hasMultiplier = false;
         let statusMessageTimer = null;
 
+        // --- 8. ДОДАНО FIREBASE ЗМІННІ ---
+        let dbRef;
+        let isInitialized = false;
+
         // --- DOM ЕЛЕМЕНТИ (отримуємо після завантаження DOM) ---
         let dom = {};
 
         // --- СЕЙФЕРИ/БЛОКУВАННЯ UI ---
         function setIsSaving(saving) {
             isSaving = saving;
-            // Додатково можна тут додати клас 'cursor-wait' до body, якщо потрібно
         }
         
         // --- ДОПОМІЖНІ ФУНКЦІЇ UI ---
 
         function runLucide() {
+            // 9. ДОДАНО TRY...CATCH (за вашим проханням)
             try {
-                // Запуск рендерингу іконок. Якщо він не спрацює, він не зламає основну логіку.
                 if (typeof lucide !== 'undefined' && lucide.createIcons) {
                      lucide.createIcons();
                 }
             } catch (e) {
-                console.warn("Помилка рендерингу іконок Lucide. UI може бути неповним.", e);
+                console.warn("Помилка рендерингу іконок Lucide.", e);
             }
         }
         
@@ -372,6 +402,7 @@
         }
 
         function showStatusMessage(type, text) {
+            // Ця функція залишається без змін
             if (statusMessageTimer) clearTimeout(statusMessageTimer);
 
             dom.statusAlertText.textContent = text;
@@ -427,7 +458,6 @@
         function renderStatusDisplay() {
             renderHeartDisplay();
             
-            // Використовуємо Base64, або default URL, якщо Base64 порожній
             dom.pupkaImage.src = characterBase64 || DEFAULT_PUPKA_IMAGE_URL;
             dom.pupkaImage.classList.remove('object-contain', 'p-2');
             dom.pupkaImage.classList.add('object-cover');
@@ -463,7 +493,6 @@
         }
         
         function renderXpInputSection() {
-            // Оновлення списку активностей
             dom.rewardsList.innerHTML = '';
             REWARDS.forEach(reward => {
                 let rewardName = reward.name;
@@ -479,12 +508,10 @@
                     <div class="font-medium text-gray-700">${rewardName}</div>
                     <div class="text-sm font-bold ${reward.isBonus ? 'text-green-600' : 'text-indigo-600'}">+${reward.xp} XP</div>
                 `;
-                // **Це ключовий елемент, який повинен працювати**
                 div.onclick = () => toggleActivity(reward.id);
                 dom.rewardsList.appendChild(div);
             });
 
-            // Оновлення X2 множника та кнопок
             dom.multiplierLabel.textContent = MULTIPLIER.name;
             dom.multiplierCheckbox.checked = hasMultiplier;
             dom.addXpBtn.disabled = selectedActivities.length === 0 || isSaving || isDead;
@@ -492,15 +519,13 @@
             
             dom.multiplierCheckbox.onchange = (e) => { 
                 hasMultiplier = e.target.checked; 
-                renderXpInputSection(); // Оновлюємо, щоб відобразити стан кнопки XP
+                renderXpInputSection();
             };
         }
 
         function renderActionButtons() {
-            // Стан смерті
             toggleElement(dom.cprSection, isDead);
             
-            // Блокування кнопок, якщо мертвий
             if (isDead) {
                 dom.actionButtonsContainer.classList.add('opacity-50', 'pointer-events-none');
                 toggleElement(dom.healOptions, false);
@@ -511,12 +536,10 @@
                 dom.actionButtonsContainer.classList.remove('opacity-50', 'pointer-events-none');
             }
             
-            // Оновлення кнопок
             dom.cprBtn.disabled = isSaving;
             dom.showHealBtn.disabled = isSaving || isDead || health === MAX_HEALTH;
             dom.showPenaltyBtn.disabled = isSaving || isDead;
 
-            // Стан видимості
             toggleElement(dom.healOptions, showHealOptions && !isDead);
             toggleElement(dom.penaltyOptions, showPenaltyOptions && !isDead);
         }
@@ -533,8 +556,10 @@
                     ? ` (${item.details.endHealth}/${MAX_HEALTH} ❤️)`
                     : '';
                 const isLastAction = lastActionId === item.id;
+                
+                // 10. Оновлена логіка часу для Firebase (замість localStorage ID)
                 const timestamp = item.timestamp 
-                    ? new Date(parseInt(item.timestamp.split('_')[0])).toLocaleTimeString('uk-UA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) 
+                    ? new Date(item.timestamp).toLocaleTimeString('uk-UA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) 
                     : '...';
 
                 const div = document.createElement('div');
@@ -561,13 +586,13 @@
         }
 
         function renderAll() {
+            // 11. ДОДАНО TRY...CATCH (за вашим проханням)
             try {
                 renderStatusDisplay();
                 renderXpInputSection();
                 renderActionButtons();
                 renderHistory();
                 
-                // Глобальне блокування UI
                 const uiSections = [dom.xpSectionContent, dom.actionButtonsContainer, dom.historySectionContent, dom.imageContainer];
                 const blockClass = 'ui-blocked';
                 
@@ -593,126 +618,186 @@
                     dom.closeImageUploader.disabled = false;
                 }
 
-                dom.userIdDisplay.textContent = 'місцевий-користувач';
+                // 12. Оновлено ID
+                dom.userIdDisplay.textContent = PUPKA_ID;
+
             } catch (error) {
                  console.error("Критична помилка рендерингу в renderAll:", error);
                  showStatusMessage('error', 'Критична помилка UI. Перезавантажте сторінку.');
             }
         }
 
-        // --- ЛОГІКА LOCALSTORAGE ---
+        // --- 13. ЛОГІКА FIREBASE (ЗАМІНА LOCALSTORAGE) ---
 
-        function loadStateFromLocalStorage() {
+        // 13a. Видалено 'loadStateFromLocalStorage'
+        // 13b. Видалено 'saveStateToLocalStorage'
+        // 13c. Видалено 'addHistoryEntry'
+
+        function initFirebase() {
+            // ДОДАНО TRY...CATCH
             try {
-                const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
-                if (savedState) {
-                    const state = JSON.parse(savedState);
-                    xp = state.xp || 0;
-                    health = (state.health !== undefined && state.health !== null) ? state.health : MAX_HEALTH;
-                    characterBase64 = state.characterBase64 || '';
-                    history = state.history || [];
-                    lastActionId = state.lastActionId || null;
-                    isDead = (health <= 0);
-                } else {
+                // Перевірка, чи ключі були вставлені
+                if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("AIzaSy") === false) {
+                    showStatusMessage('error', 'Ключі Firebase не налаштовані! Вставте ваші ключі в код.');
+                    if (dom.loader) dom.loader.style.display = 'none';
+                    return;
+                }
+                
+                firebase.initializeApp(firebaseConfig);
+                dbRef = firebase.database().ref('pupkas').child(PUPKA_ID);
+                
+                // .on('value') - це слухач, який спрацьовує при першому завантаженні
+                // і при кожній зміні даних у базі
+                dbRef.on('value', (snapshot) => {
+                    syncStateFromFirebase(snapshot);
+                    if (!isInitialized) {
+                        isInitialized = true;
+                        // Перший рендер відбувається тільки після отримання даних
+                        renderAll(); 
+                    }
+                }, (error) => {
+                    // Ця функція спрацює, якщо правила безпеки забороняють читання
+                    console.error("Firebase Read Failed:", error);
+                    showStatusMessage('error', 'Не вдалося підключитися до Firebase. Перевірте правила безпеки.');
+                    if (dom.loader) dom.loader.style.display = 'none';
+                });
+
+            } catch (e) {
+                 console.error("Firebase Init Failed:", e);
+                 showStatusMessage('error', 'Помилка ініціалізації Firebase. Перевірте, чи коректні ключі.');
+                 if (dom.loader) dom.loader.style.display = 'none';
+            }
+        }
+
+        function syncStateFromFirebase(snapshot) {
+            // ДОДАНО TRY...CATCH
+            try {
+                const data = snapshot.val();
+                
+                if (!data) {
+                    // Якщо даних немає (перший запуск), ініціалізуємо
                     xp = 0;
                     health = MAX_HEALTH;
                     history = [];
                     characterBase64 = '';
                     lastActionId = null;
                     isDead = false;
+                } else {
+                    // Оновлюємо глобальний стан
+                    xp = data.xp || 0;
+                    health = data.health !== undefined && data.health !== null ? data.health : MAX_HEALTH;
+                    characterBase64 = data.characterBase64 || '';
+                    
+                    history = [];
+                    if (data.history) {
+                        // Конвертуємо об'єкт Firebase в масив
+                        history = Object.keys(data.history).map(key => ({
+                            ...data.history[key],
+                            id: key // Використовуємо ключ Firebase як ID дії
+                        })).sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
+                    }
+                    
+                    lastActionId = data.lastActionId || null;
+                    isDead = (health <= 0);
                 }
+
+                // Оновлюємо UI, якщо вже ініціалізовано
+                // (при першому запуску це викличе renderAll() в initFirebase)
+                if (isInitialized) {
+                     renderAll();
+                }
+            
             } catch (e) {
-                console.error("Помилка завантаження стану з localStorage:", e);
-                xp = 0; health = MAX_HEALTH; history = []; characterBase64 = ''; lastActionId = null; isDead = false;
-                showStatusMessage('error', 'Помилка завантаження даних. Скинуто до початкового стану.');
+                console.error("Помилка в syncStateFromFirebase:", e);
+                showStatusMessage('error', 'Помилка обробки даних з хмари.');
+            } finally {
+                // !!! ЦЕ КЛЮЧОВИЙ ФІКС: 
+                // Приховуємо завантажувач тут, щоб він зник,
+                // навіть якщо renderAll() або syncState() видасть помилку.
+                if (dom.loader) dom.loader.style.display = 'none';
             }
         }
 
-        function saveStateToLocalStorage() {
-            try {
-                const state = { xp, health, characterBase64, history, lastActionId };
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
-            } catch (e) {
-                console.error("Помилка збереження стану в localStorage:", e);
-                showStatusMessage('error', 'Помилка збереження даних. Можливо, сховище переповнене.');
-            }
-        }
-        
-        // --- ЛОГІКА ГРИ ---
-
-        function addHistoryEntry(type, details, endHealth) {
-            const newHistoryId = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 9);
-            
-            const newEntry = {
-                id: newHistoryId,
-                type: type,
-                details: { ...details, endHealth },
-                timestamp: newHistoryId
-            };
-            
-            history.unshift(newEntry);
-            history = history.slice(0, 10);
-            
-            return newHistoryId;
-        };
-
-        function updateGameState(xpChange, healthUpdate, description, type) {
-            if (isSaving) return;
+        async function updateGameState(xpChange, healthUpdate, description, type) {
+            if (isSaving || !dbRef) return;
             setIsSaving(true);
             
-            let currentHealth = health;
-            
-            let calculatedHealth;
-            if (healthUpdate === 'SET_TO_ONE' && currentHealth <= 0) {
-                calculatedHealth = 1;
-            } else if (typeof healthUpdate === 'number') {
-                calculatedHealth = Math.min(MAX_HEALTH, Math.max(0, currentHealth + healthUpdate));
-            } else {
-                calculatedHealth = currentHealth;
+            // ДОДАНО TRY...CATCH
+            try {
+                // Отримання поточного стану (щоб уникнути колізій синхронізації)
+                // Ми використовуємо глобальні 'xp' і 'health', які вже синхронізовані
+                
+                let currentHealth = health;
+                
+                let calculatedHealth;
+                if (healthUpdate === 'SET_TO_ONE' && currentHealth <= 0) {
+                    calculatedHealth = 1;
+                } else if (typeof healthUpdate === 'number') {
+                    calculatedHealth = Math.min(MAX_HEALTH, Math.max(0, currentHealth + healthUpdate));
+                } else {
+                    calculatedHealth = currentHealth;
+                }
+
+                const calculatedXp = Math.max(0, xp + xpChange);
+                
+                // Створюємо запис історії
+                const newHistoryEntry = {
+                    type: type,
+                    details: { xpChange: xpChange, healthChange: healthUpdate, description: description, endHealth: calculatedHealth },
+                    timestamp: firebase.database.ServerValue.TIMESTAMP // Спеціальне значення для Firebase
+                };
+                
+                // Відправляємо історію в базу і отримуємо її унікальний ключ
+                const newHistoryRef = dbRef.child('history').push(newHistoryEntry);
+                const newHistoryId = newHistoryRef.key;
+                
+                // Готуємо оновлення основного стану
+                const updates = {
+                    xp: calculatedXp,
+                    health: calculatedHealth,
+                    lastActionId: newHistoryId // Зберігаємо ключ останньої дії
+                };
+
+                // Виконуємо оновлення
+                await dbRef.update(updates);
+                
+                // (Не потрібно викликати renderAll(), .on('value') зробить це автоматично)
+                showStatusMessage('success', `Успішно оновлено: ${description}`);
+                
+            } catch (error) {
+                console.error("Помилка оновлення Firebase:", error);
+                showStatusMessage('error', 'Помилка синхронізації з хмарою.');
+            } finally {
+                setIsSaving(false);
             }
-
-            const calculatedXp = Math.max(0, xp + xpChange);
-            
-            xp = calculatedXp;
-            health = calculatedHealth;
-            isDead = (health <= 0);
-
-            const newHistoryId = addHistoryEntry(type, { 
-                xpChange: xpChange, 
-                healthChange: healthUpdate, 
-                description: description 
-            }, calculatedHealth);
-            
-            lastActionId = newHistoryId;
-
-            saveStateToLocalStorage();
-            
-            setIsSaving(false);
-            renderAll();
         };
 
-        function handleUndoLastAction() {
-            if (!lastActionId || isSaving) {
+        async function handleUndoLastAction() {
+            if (!lastActionId || isSaving || !dbRef) {
                 showStatusMessage('warning', 'Неможливо відмінити: немає останньої дії або система зайнята.');
                 return;
             }
-
+             
             setIsSaving(true);
 
+            // ДОДАНО TRY...CATCH
             try {
-                const entryToUndo = history.find(item => item.id === lastActionId);
+                // Отримуємо знімок *один раз*, щоб уникнути умов гонки
+                const snapshot = await dbRef.once('value');
+                const data = snapshot.val();
+                
+                if (!data || !data.history) throw new Error("No data or history found.");
+                
+                // Знаходимо дію, яку треба скасувати, за її ключем
+                const entryToUndo = data.history[lastActionId];
                 
                 if (!entryToUndo) {
-                    showStatusMessage('error', 'Помилка: запис історії не знайдено.');
-                    lastActionId = null;
-                    saveStateToLocalStorage();
-                    setIsSaving(false);
-                    renderAll();
+                    showStatusMessage('error', 'Помилка: запис історії для відміни не знайдено в хмарі.');
+                    await dbRef.update({ lastActionId: null }); // Скидаємо, якщо ID невірний
                     return;
                 }
                 
                 const details = entryToUndo.details || {};
-                
                 const undoneXpChange = details.xpChange ? -details.xpChange : 0;
                 let undoneHealthChange = 0;
                 
@@ -720,19 +805,23 @@
                     undoneHealthChange = -details.healthChange;
                 } else if (details.healthChange === 'SET_TO_ONE') {
                     showStatusMessage('error', 'Відміна «Штучного дихання» (CPR) не підтримується.');
-                    setIsSaving(false);
-                    renderAll();
-                    return;
+                    return; // Виходимо, не знімаючи isSaving
                 }
                 
-                xp = Math.max(0, xp + undoneXpChange);
-                health = Math.min(MAX_HEALTH, Math.max(0, health + undoneHealthChange));
-                isDead = (health <= 0);
+                // Використовуємо поточний стан з data
+                const newXp = Math.max(0, (data.xp || 0) + undoneXpChange);
+                const currentHealth = (data.health !== undefined && data.health !== null) ? data.health : MAX_HEALTH;
+                const newHealth = Math.min(MAX_HEALTH, Math.max(0, currentHealth + undoneHealthChange));
                 
-                history = history.filter(item => item.id !== lastActionId);
-                lastActionId = null; 
+                // Готуємо "атомне" оновлення: видаляємо історію та оновлюємо стан
+                const updates = {};
+                updates[`history/${lastActionId}`] = null; // Видалення запису історії
+                updates['xp'] = newXp;
+                updates['health'] = newHealth;
+                updates['lastActionId'] = null; // Очищаємо ID останньої дії
+
+                await dbRef.update(updates);
                 
-                saveStateToLocalStorage();
                 showStatusMessage('success', `Дія успішно відмінена: ${details.description || 'невідома дія'}`);
                 
             } catch (e) {
@@ -740,32 +829,38 @@
                 showStatusMessage('error', 'Помилка відміни дії.');
             } finally {
                 setIsSaving(false);
-                renderAll();
+                // (renderAll() викличеться автоматично)
             }
         };
 
-        function handleSaveBase64(base64) {
+        async function handleSaveBase64(base64) {
             if (isDead) {
                 showStatusMessage('warning', 'Пупка мертва. Не можна міняти фото!');
                 return;
             }
-            if (isSaving) return;
+            if (isSaving || !dbRef) return;
             
             setIsSaving(true);
             showStatusMessage('info', 'Зберігаю зображення...');
 
-            characterBase64 = base64;
-            saveStateToLocalStorage();
-            
-            toggleElement(dom.imageUploader, false);
-            showImageInput = false;
-            showStatusMessage('success', 'Зображення Пупки успішно оновлено!');
-            
-            setIsSaving(false);
-            renderAll();
+            // ДОДАНО TRY...CATCH
+            try {
+                // Оновлюємо лише поле characterBase64
+                await dbRef.update({ characterBase64: base64 });
+                showStatusMessage('success', 'Зображення Пупки успішно оновлено!');
+            } catch (error) {
+                console.error("Помилка збереження зображення:", error);
+                showStatusMessage('error', 'Помилка збереження зображення в хмарі.');
+            } finally {
+                setIsSaving(false);
+                toggleElement(dom.imageUploader, false);
+                showImageInput = false;
+                // (renderAll() викличеться автоматично)
+            }
         };
 
         function handleRemoveImage() {
+            // Ця функція не змінюється
             if (isDead) {
                 showStatusMessage('warning', 'Пупка мертва. Не можна міняти фото!');
                 return;
@@ -775,23 +870,27 @@
             showImageInput = false;
         };
 
-        function handleResetCharacter() {
-            if (isSaving) return;
+        async function handleResetCharacter() {
+            if (isSaving || !dbRef) return;
 
             setIsSaving(true);
             setButton(dom.confirmResetBtn, { text: 'Скидаю...', disabled: true });
             dom.cancelResetBtn.disabled = true;
 
+            // ДОДАНО TRY...CATCH
             try {
-                xp = 0;
-                health = MAX_HEALTH;
-                characterBase64 = '';
-                lastActionId = null;
-                history = [];
-                isDead = false;
+                // Готуємо повний об'єкт для скидання
+                const updates = {
+                    xp: 0,
+                    health: MAX_HEALTH,
+                    characterBase64: '',
+                    lastActionId: null,
+                    history: null // Повне видалення історії
+                };
 
-                saveStateToLocalStorage();
+                await dbRef.set(updates); // .set() повністю перезаписує дані
                 
+                // Локально скидаємо UI
                 selectedActivities = [];
                 hasMultiplier = false;
                 showHealOptions = false;
@@ -803,16 +902,16 @@
 
             } catch (e) {
                 console.error("Помилка перестворення персонажа:", e);
-                showStatusMessage('error', 'Помилка перестворення.');
+                showStatusMessage('error', 'Помилка перестворення. Спробуйте пізніше.');
             } finally {
                 setIsSaving(false);
                 setButton(dom.confirmResetBtn, { text: 'Перестворити', disabled: false });
                 dom.cancelResetBtn.disabled = false;
-                renderAll();
+                // (renderAll() викличеться автоматично)
             }
         };
 
-        // --- ЛОГІКА XP ---
+        // --- ЛОГІКА XP (не змінюється, викликає updateGameState) ---
 
         const handleXPUpdate = () => {
             if (isDead) {
@@ -835,11 +934,13 @@
 
             const description = `${selectedActivities.map(id => REWARDS.find(r => r.id === id)?.name || id).join(', ')}` + (hasMultiplier ? ` (×${MULTIPLIER.factor})` : '');
 
+            // Викликаємо оновлену функцію Firebase
             updateGameState(totalXP, 0, `Отримано XP: +${totalXP}. Активності: ${description}`, 'update');
 
-            // Скидання стану після успішного оновлення
+            // Скидаємо UI локально для миттєвого відгуку
             selectedActivities = [];
             hasMultiplier = false;
+            renderXpInputSection();
         };
 
         const toggleActivity = (id) => {
@@ -853,7 +954,7 @@
             renderXpInputSection();
         };
 
-        // --- ЛОГІКА ЗДОРОВ'Я ---
+        // --- ЛОГІКА ЗДОРОВ'Я (не змінюється, викликає updateGameState) ---
 
         const handleHealthChange = (healthChange, xpChange, actionName, type) => {
             if (isDead && healthChange <= 0) { 
@@ -865,17 +966,22 @@
                 return;
             }
             
+            // Викликаємо оновлену функцію Firebase
             updateGameState(xpChange, healthChange, `${actionName}: ${healthChange > 0 ? '+' : ''}${healthChange} ❤️${xpChange !== 0 ? `, ${xpChange > 0 ? '+' : ''}${xpChange} XP` : ''}`, type);
+            
+            // Скидаємо UI локально
             showHealOptions = false;
             showPenaltyOptions = false;
+            renderActionButtons();
         };
 
         const handleCPR = () => {
             if (!isDead) return; 
+            // Викликаємо оновлену функцію Firebase
             updateGameState(0, 'SET_TO_ONE', 'Опція «Штучне дихання» (42 км за 2 дні) виконана. Пупка ожила, але виснажена.', 'heal');
         };
         
-        // --- ЛОГІКА IMAGE UPLOADER ---
+        // --- ЛОГІКА IMAGE UPLOADER (не змінюється) ---
         
         const handlePaste = async (e) => {
             e.preventDefault();
@@ -901,12 +1007,13 @@
             }
 
             if (imageFile) {
-                if (imageFile.size > 1024 * 1024) { 
-                    showStatusMessage('error', 'Зображення занадто велике ( > 1МБ). Спробуйте менше.');
+                // 15. Перевірка розміру (Firebase RTDB має обмеження ~10MB, але краще менше)
+                if (imageFile.size > 2 * 1024 * 1024) { // 2MB
+                    showStatusMessage('error', 'Зображення занадто велике ( > 2МБ). Спробуйте менше.');
                 } else {
                     try {
                         const base64Data = await fileToBase64(imageFile);
-                        handleSaveBase64(base64Data);
+                        await handleSaveBase64(base64Data); // Змінено на async
                     } catch (error) {
                         console.error("Помилка при конвертації Base64:", error);
                         showStatusMessage('error', 'Помилка при обробці зображення.');
@@ -940,6 +1047,7 @@
                 const button = document.createElement('button');
                 button.className = "flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-pink-500 hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed w-full";
                 button.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5 mr-2"></i> ${task.name}`;
+                // Виправлено: handleHealthChange(healthChange, xpChange, ...)
                 button.onclick = () => handleHealthChange(1, 0, `Лікування: ${task.name}`, 'heal');
                 dom.healTasksList.appendChild(button);
             });
@@ -950,6 +1058,7 @@
                 const button = document.createElement('button');
                 button.className = "flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full";
                 button.innerHTML = `<i data-lucide="x-circle" class="w-5 h-5 mr-2"></i> ${penalty.name} (${penalty.health ? penalty.health + ' ❤️' : ''} ${penalty.xp ? (penalty.xp > 0 ? '+' : '') + penalty.xp + ' XP' : ''})`;
+                // Виправлено: handleHealthChange(healthChange, xpChange, ...)
                 button.onclick = () => handleHealthChange(penalty.health, penalty.xp, `Штраф: ${penalty.name}`, 'penalty');
                 dom.penaltyTasksList.appendChild(button);
             });
@@ -979,10 +1088,12 @@
             dom.cprBtn.onclick = handleCPR;
             dom.showHealBtn.onclick = () => {
                 showHealOptions = !showHealOptions;
+                showPenaltyOptions = false; // Закриваємо іншу панель
                 renderActionButtons();
             };
             dom.showPenaltyBtn.onclick = () => {
                 showPenaltyOptions = !showPenaltyOptions;
+                showHealOptions = false; // Закриваємо іншу панель
                 renderActionButtons();
             };
             dom.closeHealBtn.onclick = () => { showHealOptions = false; renderActionButtons(); };
@@ -1053,16 +1164,17 @@
             // 2. Ініціалізувати UI (події, статичні списки)
             initUI();
             
-            // 3. Завантажити стан з localStorage
-            loadStateFromLocalStorage();
+            // 3. ЗАМІНЕНО 'loadStateFromLocalStorage()' НА 'initFirebase()'
+            initFirebase();
             
-            // 4. Сховати завантажувач
-            if (dom.loader) dom.loader.style.display = 'none';
+            // 4. ВИДАЛЕНО приховування завантажувача
+            // if (dom.loader) dom.loader.style.display = 'none';
             
-            // 5. Перший рендер
-            renderAll();
+            // 5. ВИДАЛЕНО перший рендер
+            // renderAll();
         });
         
     </script>
 </body>
 </html>
+
