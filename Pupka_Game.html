@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра "Пупка" (Vanilla JS/Firestore)</title>
+    <!-- Загрузка Tailwind CSS через CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Загрузка иконок Lucide Icons (использовались в оригинальном React-коде) -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        /* Базовый шрифт */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb; /* bg-gray-50 */
+        }
+        /* Стили для центрирования и анимации загрузки */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff;
+            z-index: 1000;
+        }
+        .icon-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem;
+            border-radius: 9999px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            transition: all 0.15s ease-in-out;
+        }
+        .icon-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .icon-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        .pupka-image {
+             /* 1:1 aspect ratio, covers the container */
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            border-radius: 1.5rem; /* rounded-3xl */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border: 4px solid white;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 p-4 sm:p-8 font-sans">
+
+    <!-- Загрузочный экран -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="text-indigo-600 text-lg font-semibold flex items-center">
+          <span class="animate-spin mr-3 w-6 h-6">
+            <!-- Иконка RefreshCw -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.87M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.87M15 3.5l-3.5 3.5 3.5 3.5M9 20.5l3.5-3.5-3.5-3.5"/></svg>
+          </span> 
+          Завантаження Пупки...
+        </div>
+    </div>
+
+    <!-- Основной контент приложения -->
+    <div id="app-container" class="max-w-4xl mx-auto space-y-8 hidden">
+        <div class="space-y-4 text-center">
+            <h1 class="text-4xl font-extrabold text-indigo-700">Віртуальна Пупка!</h1>
+            <p class="text-gray-500">Ваш унікальний ID: <span id="user-id-display" class="font-mono bg-gray-200 px-2 py-1 rounded text-sm text-gray-700 break-all"></span></p>
+        </div>
+
+        <!-- Сетка статусов и Пупки -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Блок статуса (Сообщение) -->
+            <div id="status-display" class="md:col-span-1">
+                <!-- Сообщение о состоянии будет вставлено сюда JS -->
+            </div>
+
+            <!-- XP и Уровень -->
+            <div class="md:col-span-2 space-y-4">
+                <!-- Блок XP -->
+                <div id="xp-bar" class="p-4 bg-white rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-500">XP (До наступного рівня)</span>
+                        <span id="xp-value" class="text-lg font-bold text-indigo-600"></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="xp-progress" class="bg-indigo-500 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div id="level-info" class="mt-2 text-sm text-gray-700"></div>
+                </div>
+
+                <!-- Блок здоровья -->
+                <div id="health-bar" class="p-4 bg-white rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-500">Здоров'я</span>
+                        <span id="health-value" class="text-lg font-bold text-red-600"></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="health-progress" class="bg-red-500 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div id="last-action-display" class="mt-2 text-xs text-gray-500"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Центральная часть: Изображение Пупки и Кнопки -->
+        <div class="bg-white p-6 rounded-3xl shadow-2xl space-y-6 text-center">
+            
+            <!-- Изображение Пупки -->
+            <div class="w-full max-w-sm mx-auto p-4 bg-gray-100 rounded-3xl">
+                <img id="pupka-img" src="https://placehold.co/400x400/818CF8/FFFFFF?text=Pupka" alt="Pupka" class="pupka-image w-full h-auto">
+            </div>
+
+            <!-- Кнопки действий -->
+            <div id="action-buttons" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <button id="feed-btn" class="icon-btn bg-green-500 text-white hover:bg-green-600">
+                    <i data-lucide="utensils" class="w-5 h-5 mr-1"></i> Нагодувати (+20 XP)
+                </button>
+                <button id="train-btn" class="icon-btn bg-yellow-500 text-white hover:bg-yellow-600">
+                    <i data-lucide="zap" class="w-5 h-5 mr-1"></i> Тренувати (+30 XP)
+                </button>
+                <button id="clean-btn" class="icon-btn bg-blue-500 text-white hover:bg-blue-600">
+                    <i data-lucide="rotate-cw" class="w-5 h-5 mr-1"></i> Прибрати (+10 XP)
+                </button>
+                <button id="play-btn" class="icon-btn bg-pink-500 text-white hover:bg-pink-600">
+                    <i data-lucide="smile" class="w-5 h-5 mr-1"></i> Грати (+25 XP)
+                </button>
+            </div>
+            
+            <!-- Кнопка отмены -->
+            <button id="undo-btn" class="icon-btn bg-gray-400 text-white hover:bg-gray-500 mx-auto text-sm w-full sm:w-auto">
+                <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Скасувати останню дію (1 раз на годину)
+            </button>
+        </div>
+
+        <!-- Блок настроек и сброса -->
+        <div class="bg-white p-6 rounded-3xl shadow-2xl space-y-6">
+            <h2 class="text-2xl font-bold text-gray-800 border-b pb-2">Налаштування та Управління</h2>
+
+            <!-- Загрузка изображения -->
+            <div class="space-y-3">
+                <label class="block text-gray-700 font-medium">Змінити зображення Пупки (Base64)</label>
+                <input type="file" id="image-upload" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                <button id="save-image-btn" class="icon-btn bg-indigo-500 text-white hover:bg-indigo-600 text-sm">
+                    <i data-lucide="image" class="w-4 h-4 mr-2"></i> Зберегти зображення
+                </button>
+            </div>
+
+            <!-- Сброс игры -->
+            <div class="pt-4 border-t border-gray-100">
+                <button id="reset-btn" class="icon-btn bg-red-500 text-white hover:bg-red-600 text-sm">
+                    <i data-lucide="trash-2" class="w-4 h-4 mr-2"></i> Почати нову гру (ВТРАТА ПРОГРЕСУ)
+                </button>
+                <p class="text-xs text-gray-500 mt-2">Ця дія безповоротно видалить ваш поточний прогрес.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно (замена alert/confirm) -->
+    <div id="modal-container" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4">
+            <h3 id="modal-title" class="text-xl font-bold text-gray-800"></h3>
+            <p id="modal-message" class="text-gray-600"></p>
+            <div class="flex justify-end space-x-3">
+                <button id="modal-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Скасувати</button>
+                <button id="modal-confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Підтвердити</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Блок JavaScript -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, runTransaction, serverTimestamp, collection, query, limit, orderBy, getDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Включаем логирование для дебага
+        setLogLevel('debug');
+
+        // --- ГЛОБАЛЬНЫЕ КОНСТАНТЫ И ПЕРЕМЕННЫЕ ---
+        
+        const XP_GAINS = {
+            feed: 20,
+            train: 30,
+            clean: 10,
+            play: 25
+        };
+
+        const LEVELS = [
+            { name: 'Пупка (Початкова Молекула)', minXp: 0, maxXp: 100, description: 'Маленька, але жвава істота' },
+            { name: 'Мікроорганізм', minXp: 101, maxXp: 250, description: 'Починає рухатись і світитись' },
+            { name: 'Клітинка Життя', minXp: 251, maxXp: 500, description: 'Має силу й форму' },
+            { name: 'Маленьке Звірятко', minXp: 501, maxXp: 900, description: 'Починає проявляти характер' },
+            { name: 'Людинка-Пупка', minXp: 901, maxXp: 1500, description: 'Має почуття та здібності' },
+            { name: 'Справжній Пупкозавр', minXp: 1501, maxXp: 999999, description: 'Легенда, непереможний і нескінченний' }
+        ];
+
+        const INITIAL_PUPKA_DATA = {
+            xp: 0,
+            health: 100,
+            pupkaImage: 'https://placehold.co/400x400/818CF8/FFFFFF?text=Pupka',
+            lastActionTimestamp: null,
+            lastActionXP: 0,
+            lastActionType: null,
+            lastUndoTimestamp: null,
+            createdAt: serverTimestamp(),
+        };
+
+        const HEALTH_DECREASE_RATE = 1; // Health decrease per hour
+        const MAX_HEALTH = 100;
+        const UNDO_COOLDOWN_HOURS = 1;
+
+        // --- FIREBASE ИНИЦИАЛИЗАЦИЯ ---
+        
+        // Глобальные переменные из среды Canvas
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        let userId = null;
+        let pupkaRef = null;
+        let gameState = { ...INITIAL_PUPKA_DATA };
+        
+        // DOM-элементы
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const appContainer = document.getElementById('app-container');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const pupkaImg = document.getElementById('pupka-img');
+        const xpValue = document.getElementById('xp-value');
+        const xpProgress = document.getElementById('xp-progress');
+        const levelInfo = document.getElementById('level-info');
+        const healthValue = document.getElementById('health-value');
+        const healthProgress = document.getElementById('health-progress');
+        const lastActionDisplay = document.getElementById('last-action-display');
+        const statusDisplay = document.getElementById('status-display');
+        const undoBtn = document.getElementById('undo-btn');
+        const modalContainer = document.getElementById('modal-container');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+        // --- УТИЛИТЫ ---
+        
+        /**
+         * Вычисляет уровень Пупки на основе XP.
+         * @param {number} xp 
+         * @returns {{level: number, info: object, progress: number}}
+         */
+        const calculateLevelInfo = (xp) => {
+            let levelIndex = LEVELS.findIndex(l => xp >= l.minXp && xp <= l.maxXp);
+            if (levelIndex === -1) {
+                // Если XP превышает максимальный уровень
+                levelIndex = LEVELS.length - 1;
+            }
+            const currentLevel = LEVELS[levelIndex];
+            const nextLevel = LEVELS[levelIndex + 1] || currentLevel;
+            
+            const xpForLevel = currentLevel.maxXp - currentLevel.minXp;
+            const xpGainedInLevel = xp - currentLevel.minXp;
+            
+            let progress = 100;
+            let xpUntilNext = 0;
+
+            if (nextLevel !== currentLevel) {
+                progress = Math.min(100, (xpGainedInLevel / xpForLevel) * 100);
+                xpUntilNext = nextLevel.minXp - xp;
+            }
+
+            return {
+                level: levelIndex + 1,
+                info: currentLevel,
+                progress: progress,
+                xpUntilNext: xpUntilNext > 0 ? xpUntilNext : 0
+            };
+        };
+
+        /**
+         * Вычисляет текущий статус Пупки (здоровье и время).
+         * @param {object} data
+         * @returns {{text: string, type: 'error'|'warning'|'success'|'info', icon: string}}
+         */
+        const calculateStatus = (data) => {
+            const health = data.health;
+            const lastActionTime = data.lastActionTimestamp ? data.lastActionTimestamp.toDate() : new Date(0);
+            const now = new Date();
+            const timeSinceLastAction = (now - lastActionTime) / (1000 * 60 * 60); // Hours
+
+            if (health <= 0) {
+                return { text: 'Пупка померла від голоду та самотності...', type: 'error', icon: 'x-circle' };
+            }
+            if (health < 20) {
+                return { text: 'Критичний стан! Терміново допоможіть Пупці!', type: 'error', icon: 'heart' };
+            }
+            if (health < 50) {
+                return { text: 'Пупка голодна і сумна. Потребує уваги!', type: 'warning', icon: 'clock' };
+            }
+            if (timeSinceLastAction > 12) {
+                return { text: 'Давно не заходили. Здоров\'я сильно знизилось.', type: 'warning', icon: 'clock' };
+            }
+            if (timeSinceLastAction < 1) {
+                return { text: 'Пупка щаслива! Нещодавно про неї піклувалися.', type: 'success', icon: 'check-circle' };
+            }
+            return { text: 'Пупка в нормі. Чекає на нові пригоди!', type: 'info', icon: 'smile' };
+        };
+
+        /**
+         * Рассчитывает уменьшение здоровья с момента последнего действия.
+         * @param {object} data 
+         * @returns {number} Новое значение здоровья
+         */
+        const calculateCurrentHealth = (data) => {
+            if (data.health <= 0) return 0;
+
+            const lastTimestamp = data.lastActionTimestamp?.toDate() || data.createdAt?.toDate() || new Date();
+            const now = new Date();
+            const hoursPassed = (now - lastTimestamp) / (1000 * 60 * 60);
+            
+            const healthLoss = Math.floor(hoursPassed * HEALTH_DECREASE_RATE);
+            return Math.max(0, data.health - healthLoss);
+        };
+
+        // --- РАБОТА С UI (ЗАМЕНА РЕНДЕРА REACT) ---
+        
+        /**
+         * Отображает/скрывает модальное окно.
+         * @param {string} title 
+         * @param {string} message 
+         * @param {boolean} isConfirm - Если true, показываются кнопки OK/Отмена
+         * @returns {Promise<boolean>} Resolves with true for Confirm, false for Cancel
+         */
+        const showModal = (title, message, isConfirm = false) => {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            
+            if (isConfirm) {
+                modalCancelBtn.classList.remove('hidden');
+                modalConfirmBtn.classList.remove('hidden');
+            } else {
+                modalCancelBtn.classList.add('hidden');
+                modalConfirmBtn.classList.add('hidden');
+            }
+            
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
+
+            return new Promise(resolve => {
+                const handleConfirm = () => {
+                    modalContainer.classList.add('hidden');
+                    modalContainer.classList.remove('flex');
+                    modalConfirmBtn.removeEventListener('click', handleConfirm);
+                    modalCancelBtn.removeEventListener('click', handleCancel);
+                    resolve(true);
+                };
+                const handleCancel = () => {
+                    modalContainer.classList.add('hidden');
+                    modalContainer.classList.remove('flex');
+                    modalConfirmBtn.removeEventListener('click', handleConfirm);
+                    modalCancelBtn.removeEventListener('click', handleCancel);
+                    resolve(false);
+                };
+
+                if (isConfirm) {
+                    modalConfirmBtn.addEventListener('click', handleConfirm);
+                    modalCancelBtn.addEventListener('click', handleCancel);
+                } else {
+                    // Для информационных сообщений: ждем клика вне модалки или Esc
+                    modalContainer.addEventListener('click', (e) => {
+                        if (e.target === modalContainer) handleConfirm();
+                    }, { once: true });
+                }
+            });
+        };
+
+        /**
+         * Обновляет статусное сообщение
+         * @param {{text: string, type: 'error'|'warning'|'success'|'info', icon: string}} status 
+         */
+        const updateStatusDisplay = (status) => {
+            const icons = lucide.createIcons();
+            let colorClass = '';
+            
+            switch (status.type) {
+                case 'error': colorClass = 'bg-red-100 text-red-700 border-red-500'; break;
+                case 'warning': colorClass = 'bg-yellow-100 text-yellow-700 border-yellow-500'; break;
+                case 'success': colorClass = 'bg-green-100 text-green-700 border-green-500'; break;
+                case 'info': colorClass = 'bg-indigo-100 text-indigo-700 border-indigo-500'; break;
+                default: colorClass = 'bg-gray-100 text-gray-700 border-gray-500';
+            }
+
+            statusDisplay.innerHTML = `
+                <div class="p-4 rounded-xl shadow-lg border-l-4 font-semibold max-w-xs ${colorClass} flex items-center w-full">
+                    <span class="w-5 h-5 mr-3 ${status.type === 'info' ? 'animate-spin' : ''}">
+                       ${icons[status.icon] ? icons[status.icon].toSvg() : icons['help-circle'].toSvg()}
+                    </span>
+                    ${status.text}
+                </div>
+            `;
+        };
+        
+        /**
+         * Общая функция обновления DOM-элементов при изменении gameState
+         */
+        const updateUI = () => {
+            if (!gameState || !userId) return;
+
+            // 1. Обновление User ID
+            userIdDisplay.textContent = userId;
+            
+            // 2. Вычисление и обновление здоровья
+            const currentHealth = calculateCurrentHealth(gameState);
+            const healthProgressPct = currentHealth;
+            
+            healthValue.textContent = `${currentHealth}%`;
+            healthProgress.style.width = `${healthProgressPct}%`;
+            healthProgress.classList.remove('bg-red-500', 'bg-orange-500', 'bg-green-500');
+            if (currentHealth < 20) {
+                healthProgress.classList.add('bg-red-500');
+            } else if (currentHealth < 50) {
+                healthProgress.classList.add('bg-orange-500');
+            } else {
+                healthProgress.classList.add('bg-green-500');
+            }
+
+            // 3. Вычисление и обновление XP/Уровня
+            const { level, info, progress, xpUntilNext } = calculateLevelInfo(gameState.xp);
+            
+            xpValue.textContent = gameState.xp;
+            xpProgress.style.width = `${progress}%`;
+            
+            let levelText = `Рівень ${level}: ${info.name}. ${info.description}`;
+            if (xpUntilNext > 0) {
+                levelText += ` (${xpUntilNext} XP до наступного рівня)`;
+            }
+            levelInfo.textContent = levelText;
+
+            // 4. Обновление статуса
+            updateStatusDisplay(calculateStatus({ ...gameState, health: currentHealth }));
+
+            // 5. Обновление изображения
+            pupkaImg.src = gameState.pupkaImage || 'https://placehold.co/400x400/818CF8/FFFFFF?text=Pupka';
+
+            // 6. Обновление Последнего действия
+            const lastActionTime = gameState.lastActionTimestamp ? gameState.lastActionTimestamp.toDate().toLocaleString('uk-UA') : 'Ніколи';
+            lastActionDisplay.textContent = `Остання дія: ${gameState.lastActionType || 'Нічого'} (+${gameState.lastActionXP} XP) о ${lastActionTime}`;
+
+            // 7. Обновление кнопки отмены (Cooldown)
+            const now = new Date().getTime();
+            const lastUndo = gameState.lastUndoTimestamp ? gameState.lastUndoTimestamp.toDate().getTime() : 0;
+            const cooldownMs = UNDO_COOLDOWN_HOURS * 60 * 60 * 1000;
+            const canUndo = now - lastUndo > cooldownMs;
+
+            if (canUndo && gameState.lastActionType && gameState.lastActionXP > 0) {
+                undoBtn.disabled = false;
+                undoBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                undoBtn.classList.add('bg-gray-700', 'hover:bg-gray-800');
+            } else {
+                undoBtn.disabled = true;
+                undoBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                undoBtn.classList.remove('bg-gray-700', 'hover:bg-gray-800');
+                if (!canUndo) {
+                    const nextTime = new Date(lastUndo + cooldownMs).toLocaleTimeString('uk-UA');
+                    undoBtn.title = `Скасування буде доступне після ${nextTime}`;
+                } else if (!gameState.lastActionType) {
+                    undoBtn.title = `Немає дій для скасування`;
+                }
+            }
+            
+            // Запускаем отрисовку иконок после обновления DOM
+            lucide.createIcons();
+        };
+
+        // --- FIREBASE LOGIC ---
+        
+        /**
+         * Главная функция для выполнения игровых действий (запись в Firestore)
+         * @param {string} type - Тип действия ('feed', 'train', 'clean', 'play')
+         */
+        const performAction = async (type) => {
+            if (!pupkaRef || calculateCurrentHealth(gameState) <= 0) {
+                await showModal('Помилка', 'Пупка померла. Скиньте гру, щоб почати знову!', false);
+                return;
+            }
+
+            try {
+                const xpGain = XP_GAINS[type];
+
+                await runTransaction(db, async (transaction) => {
+                    const docSnapshot = await transaction.get(pupkaRef);
+                    const currentData = docSnapshot.exists() ? docSnapshot.data() : INITIAL_PUPKA_DATA;
+
+                    // 1. Рассчитываем текущее здоровье перед действием
+                    const currentHealth = calculateCurrentHealth(currentData);
+
+                    // 2. Применяем изменения
+                    const newHealth = Math.min(MAX_HEALTH, currentHealth + 10); // +10 к здоровью за любое действие
+                    const newXP = currentData.xp + xpGain;
+                    
+                    const newData = {
+                        ...currentData,
+                        xp: newXP,
+                        health: newHealth,
+                        lastActionTimestamp: serverTimestamp(),
+                        lastActionXP: xpGain,
+                        lastActionType: type,
+                    };
+
+                    transaction.set(pupkaRef, newData);
+                });
+                
+                // Краткое информационное модальное окно (замена Toast)
+                await showModal('Дія виконана!', `Ви виконали дію "${type}". Пупка отримала +${xpGain} XP та +10 Здоров'я.`, false);
+
+            } catch (e) {
+                console.error("Transaction failed: ", e);
+                await showModal('Помилка', 'Не вдалося виконати дію. Спробуйте ще раз.', false);
+            }
+        };
+
+        /**
+         * Функция отмены последнего действия
+         */
+        const undoLastAction = async () => {
+            if (!pupkaRef || !gameState.lastActionType || gameState.lastActionXP === 0) {
+                 await showModal('Увага', 'Немає дії для скасування або дія вже скасована.', false);
+                 return;
+            }
+            
+            const now = new Date().getTime();
+            const lastUndo = gameState.lastUndoTimestamp ? gameState.lastUndoTimestamp.toDate().getTime() : 0;
+            const cooldownMs = UNDO_COOLDOWN_HOURS * 60 * 60 * 1000;
+            if (now - lastUndo < cooldownMs) {
+                const nextTime = new Date(lastUndo + cooldownMs).toLocaleTimeString('uk-UA');
+                await showModal('Увага', `Скасування можна робити лише раз на годину. Спробуйте після ${nextTime}.`, false);
+                return;
+            }
+
+            const confirmed = await showModal(
+                'Скасувати дію',
+                `Ви впевнені, що хочете скасувати останню дію "${gameState.lastActionType}" (-${gameState.lastActionXP} XP)?`,
+                true
+            );
+
+            if (!confirmed) return;
+
+            try {
+                const xpLoss = gameState.lastActionXP;
+
+                await runTransaction(db, async (transaction) => {
+                    const docSnapshot = await transaction.get(pupkaRef);
+                    const currentData = docSnapshot.exists() ? docSnapshot.data() : INITIAL_PUPKA_DATA;
+
+                    const newXP = Math.max(0, currentData.xp - xpLoss);
+                    
+                    const newData = {
+                        ...currentData,
+                        xp: newXP,
+                        // Скидываем данные о последнем действии
+                        lastActionXP: 0,
+                        lastActionType: null,
+                        lastActionTimestamp: currentData.lastActionTimestamp, // Оставляем старую метку времени
+                        lastUndoTimestamp: serverTimestamp(), // Устанавливаем метку отмены для кулдауна
+                    };
+
+                    transaction.set(pupkaRef, newData);
+                });
+
+                await showModal('Успіх', 'Остання дія успішно скасована.', false);
+
+            } catch (e) {
+                console.error("Undo transaction failed: ", e);
+                await showModal('Помилка', 'Не вдалося скасувати дію.', false);
+            }
+        };
+
+        /**
+         * Сброс данных игры.
+         */
+        const resetGame = async () => {
+            const confirmed = await showModal(
+                'Скинути гру',
+                'Ця дія безповоротно видалить ваш прогрес. Ви впевнені?',
+                true
+            );
+
+            if (!confirmed) return;
+
+            if (!pupkaRef) {
+                await showModal('Помилка', 'Немає посилання на базу даних.', false);
+                return;
+            }
+
+            try {
+                // Просто устанавливаем начальные данные
+                await setDoc(pupkaRef, INITIAL_PUPKA_DATA);
+                await showModal('Успіх', 'Гра успішно скинута. Пупка народилася знову!', false);
+            } catch (e) {
+                console.error("Reset failed: ", e);
+                await showModal('Помилка', 'Не вдалося скинути гру. Спробуйте ще раз.', false);
+            }
+        };
+
+        /**
+         * Сохранение загруженного изображения.
+         */
+        const saveImage = async () => {
+            const fileInput = document.getElementById('image-upload');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                await showModal('Увага', 'Спочатку виберіть файл зображення.', false);
+                return;
+            }
+            
+            if (!pupkaRef) return;
+
+            // Чтение файла в Base64
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                const base64Image = event.target.result;
+
+                // Валидация размера (до 1MB, ограничение Firestore)
+                // Примерная проверка, может быть не совсем точной
+                if (base64Image.length > 1024 * 1024 * 1.33) { // Base64 занимает примерно на 33% больше
+                    await showModal('Помилка', 'Зображення завелике! Максимальний розмір даних документа Firestore становить 1 МБ.', false);
+                    return;
+                }
+
+                try {
+                    await runTransaction(db, async (transaction) => {
+                        const docSnapshot = await transaction.get(pupkaRef);
+                        const currentData = docSnapshot.exists() ? docSnapshot.data() : INITIAL_PUPKA_DATA;
+                        
+                        // Сохраняем только изображение
+                        transaction.update(pupkaRef, { pupkaImage: base64Image });
+                    });
+                    
+                    await showModal('Успіх', 'Зображення Пупки успішно збережено!', false);
+                } catch (e) {
+                    console.error("Image save failed: ", e);
+                    await showModal('Помилка', 'Не вдалося зберегти зображення.', false);
+                }
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // --- ГЛАВНАЯ ИНИЦИАЛИЗАЦИЯ И СЛУШАТЕЛИ FIREBASE ---
+        
+        const setupFirestoreListener = (currentUserId) => {
+            const collectionPath = `artifacts/${appId}/users/${currentUserId}/pupka_game`;
+            pupkaRef = doc(db, collectionPath, 'main_pupka_data');
+            
+            // Запускаем подписку на изменения
+            onSnapshot(pupkaRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    // Обновляем глобальное состояние игры
+                    gameState = docSnap.data();
+                    console.log("Firestore data received:", gameState);
+                    updateUI();
+                } else {
+                    // Если документа нет (новая игра), создаем его
+                    console.log("No Pupka data found, creating initial document.");
+                    setDoc(pupkaRef, INITIAL_PUPKA_DATA);
+                }
+            }, (error) => {
+                console.error("Error listening to Firestore:", error);
+                showModal('Помилка підключення', 'Не вдалося підключитися до бази даних Firestore.', false);
+            });
+        };
+
+        const initializeAppAndAuth = async () => {
+            try {
+                // 1. Авторизация (либо кастомным токеном, либо анонимно)
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // 2. Слушатель изменения состояния авторизации
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        // 3. После получения ID пользователя, настраиваем слушателя Firestore
+                        setupFirestoreListener(userId);
+                        
+                        // Скрываем загрузочный экран и показываем приложение
+                        loadingOverlay.classList.add('hidden');
+                        appContainer.classList.remove('hidden');
+                        
+                    } else {
+                        console.error("User not authenticated.");
+                        // Если по какой-то причине не удалось авторизоваться анонимно
+                        showModal('Помилка авторизації', 'Не вдалося увійти в систему. Перезавантажте сторінку.', false);
+                    }
+                });
+            } catch (e) {
+                console.error("Firebase Initialization Failed:", e);
+                showModal('Критична помилка', 'Не вдалося ініціалізувати Firebase.', false);
+            }
+        };
+
+        // --- НАСТРОЙКА DOM-СЛУШАТЕЛЕЙ ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeAppAndAuth();
+
+            // Привязка действий к кнопкам
+            document.getElementById('feed-btn').addEventListener('click', () => performAction('feed'));
+            document.getElementById('train-btn').addEventListener('click', () => performAction('train'));
+            document.getElementById('clean-btn').addEventListener('click', () => performAction('clean'));
+            document.getElementById('play-btn').addEventListener('click', () => performAction('play'));
+            
+            // Кнопка отмены
+            undoBtn.addEventListener('click', undoLastAction);
+            
+            // Кнопки управления
+            document.getElementById('reset-btn').addEventListener('click', resetGame);
+            document.getElementById('save-image-btn').addEventListener('click', saveImage);
+            
+            // Инициализация иконок Lucide для кнопок
+            lucide.createIcons();
+        });
+        
+    </script>
+</body>
+</html>
