@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pupka Tracker (Firebase Sync)</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- 1. Firebase SDK (Версія 8 для простої інтеграції в один HTML-файл) -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
     
@@ -33,17 +36,23 @@
 </head>
 <body class="bg-gray-50 p-4 sm:p-8 font-sans">
 
+    <!-- Головний контейнер -->
     <div class="max-w-4xl mx-auto space-y-8">
         
+        <!-- Хедер і Статус -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
+            <!-- Секція Статусу (StatusDisplay) -->
             <div class="md:col-span-1">
                 <div class="bg-white p-6 rounded-2xl shadow-xl text-center space-y-4">
                     <h1 class="text-3xl font-extrabold text-indigo-700">Пупка</h1>
                     
+                    <!-- Health Display -->
                     <div id="heart-display" class="flex justify-center mb-4 gap-1">
-                        </div>
+                        <!-- Серця будуть вставлені сюди -->
+                    </div>
 
+                    <!-- Character Visualization (Pupka Image) -->
                     <div id="image-container" class="w-28 h-28 mx-auto mb-4 rounded-full overflow-hidden shadow-xl border-4 border-indigo-200 transition-all duration-300 transform hover:scale-105 cursor-pointer"
                          role="button"
                          aria-label="Змінити зображення Пупки">
@@ -53,6 +62,7 @@
                              class="w-full h-full object-cover">
                     </div>
                     
+                    <!-- Поле вводу зображення (ImageUploader) -->
                     <div id="image-uploader" class="hidden-item p-4 mt-4 bg-indigo-50 rounded-xl border border-indigo-300 space-y-3">
                         <div class="flex justify-between items-center">
                             <h4 class="font-semibold text-indigo-800 flex items-center">
@@ -63,6 +73,7 @@
                             </button>
                         </div>
                         
+                        <!-- Поле для вставки -->
                         <div id="paste-area"
                              tabindex="0" 
                              class="w-full p-4 h-24 border-2 border-dashed rounded-lg text-center cursor-text transition-all duration-200 bg-white border-gray-300 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -71,18 +82,21 @@
                             </p>
                         </div>
 
+                        <!-- Кнопка скидання -->
                         <button id="remove-image-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full">
                             <i data-lucide="trash-2" class="w-5 h-5 mr-2"></i>
                             Скинути фото Пупки
                         </button>
                     </div>
 
+                    <!-- Evolution Level -->
                     <div class="font-semibold text-lg text-gray-600 pt-4 border-t border-gray-100" id="level-prefix">
                         Рівень 1
                     </div>
                     <h2 class="text-2xl font-bold text-indigo-600 mb-2" id="level-name">...</h2>
                     <p class="text-sm italic text-gray-500" id="level-description">...</p>
 
+                    <!-- XP Bar -->
                     <div class="pt-2">
                         <div class="text-sm font-medium text-gray-700 flex justify-between">
                             <span id="xp-current-text">XP: 0</span>
@@ -97,12 +111,14 @@
                 </div>
             </div>
 
+            <!-- Секція Додавання XP (XpInputSection) -->
             <div class="md:col-span-2">
                 <div id="xp-section-content" class="bg-white p-6 rounded-2xl shadow-xl space-y-4">
                     <h3 class="text-xl font-bold text-gray-800 flex items-center">
                         <i data-lucide="zap" class="w-6 h-6 mr-2 text-indigo-600"></i> Додати XP за Тренування
                     </h3>
                     
+                    <!-- Множник X2 -->
                     <label class="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-300 cursor-pointer transition-all hover:bg-yellow-100">
                         <input id="multiplier-checkbox" 
                                type="checkbox" 
@@ -110,15 +126,20 @@
                         <span id="multiplier-label" class="font-semibold text-yellow-800">...</span>
                     </label>
 
+                    <!-- Список активностей -->
                     <div id="rewards-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-2">
-                        </div>
+                        <!-- Активності будуть вставлені сюди -->
+                    </div>
                     
+                    <!-- Кнопки Дії XP -->
                     <div class="flex space-x-3 pt-2">
+                        <!-- КНОПКА ВІДМІНИ / КРОК НАЗАД -->
                         <button id="undo-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed">
                             <i data-lucide="rotate-ccw" class="w-5 h-5 mr-2"></i>
                             Крок назад
                         </button>
                         
+                        <!-- КНОПКА ЗАРАХУВАТИ XP -->
                         <button id="add-xp-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex-grow">
                             <i data-lucide="chevrons-up" class="w-5 h-5 mr-2"></i>
                             Зарахувати XP
@@ -128,11 +149,14 @@
             </div>
         </div>
 
+        <!-- Секція Дій та Історія -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
+            <!-- Секція Кнопок Дій (ActionButtons) -->
             <div class="bg-white p-6 rounded-2xl shadow-xl space-y-4">
                 <h3 class="text-xl font-bold text-gray-800">Управління Здоров'ям (❤️)</h3>
 
+                <!-- Здоров'я = 0 (CPR) -->
                 <div id="cpr-section" class="hidden-item p-4 bg-red-100 border border-red-400 rounded-xl text-red-800 font-semibold text-center space-y-3">
                     <p class="font-bold text-lg">💀 Смерть Пупки!</p>
                     <p>Потрібно виконати «Штучне дихання»!</p>
@@ -143,6 +167,7 @@
                     <p class="text-sm text-red-600">Якщо не виконано, Пупка померла назавжди.</p>
                 </div>
 
+                <!-- Кнопки Дії -->
                 <div id="action-buttons-container" class="grid grid-cols-2 gap-3">
                     <button id="show-heal-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-pink-600 hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed">
                         <i data-lucide="heart" class="w-5 h-5 mr-2"></i>
@@ -154,24 +179,29 @@
                     </button>
                 </div>
 
+                <!-- Панель Лікування -->
                 <div id="heal-options" class="hidden-item p-4 bg-pink-50 rounded-xl border border-pink-300 space-y-2">
                     <h4 class="font-semibold text-pink-800">Виконані Завдання для Лікування (+1 ❤️):</h4>
                     <div id="heal-tasks-list">
-                        </div>
+                        <!-- Завдання для лікування -->
+                    </div>
                     <button id="close-heal-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-gray-400 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed w-full mt-2">
                         Закрити
                     </button>
                 </div>
 
+                <!-- Панель Штрафів -->
                 <div id="penalty-options" class="hidden-item p-4 bg-gray-50 rounded-xl border border-gray-300 space-y-2">
                     <h4 class="font-semibold text-gray-800">Застосувати Штраф:</h4>
                     <div id="penalty-tasks-list">
-                        </div>
+                        <!-- Штрафи -->
+                    </div>
                     <button id="close-penalty-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-gray-400 hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed w-full mt-2">
                         Закрити
                     </button>
                 </div>
 
+                <!-- Кнопка Скидання/Перестворення -->
                 <div class="pt-4 border-t border-gray-200">
                     <button id="show-reset-modal-btn" class="flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full">
                         <i data-lucide="rotate-ccw" class="w-5 h-5 mr-2"></i>
@@ -180,6 +210,7 @@
                 </div>
             </div>
             
+            <!-- Секція Історії (HistorySection) -->
             <div class="bg-white p-6 rounded-2xl shadow-xl space-y-4 col-span-1 lg:col-span-2" id="history-section-content">
                 <h3 class="text-xl font-bold text-gray-800">Історія Прогресу (Останні 10)</h3>
                 <div class="max-h-80 overflow-y-auto space-y-2 pr-2" id="history-list">
@@ -191,6 +222,7 @@
         </div>
     </div>
 
+    <!-- Модальне вікно Скидання (ResetConfirmationModal) -->
     <div id="reset-modal" class="hidden-item fixed inset-0 z-50 items-center justify-center bg-black bg-opacity-50 p-4">
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4">
             <h3 class="text-xl font-bold text-red-600">Підтвердження Перестворення</h3>
@@ -208,12 +240,15 @@
         </div>
     </div>
 
+    <!-- Повідомлення про Статус (StatusAlert) -->
     <div id="status-alert" class="hidden-item fixed bottom-4 right-4 z-50 p-4 rounded-xl shadow-lg border-l-4 font-semibold max-w-xs transition-all duration-300">
         <span id="status-alert-icon-container">
-            </span>
+            <!-- Іконка буде тут -->
+        </span>
         <span id="status-alert-text">...</span>
     </div>
 
+    <!-- Завантажувач (Loader) -->
     <div id="loader" class="flex items-center justify-center min-h-screen bg-gray-100 fixed inset-0 z-50">
         <div class="text-indigo-600 text-lg font-semibold flex items-center">
             <i data-lucide="refresh-cw" class="w-6 h-6 mr-3 animate-spin"></i> З'єднання з Пупкою через Firebase...
@@ -221,21 +256,22 @@
     </div>
 
 
+    <!-- JavaScript -->
     <script> 
         // --------------------------------------------------------
-        // !!! КРОК 3: ВСТАВТЕ ВАШІ КОНФІГУРАЦІЙНІ ДАНІ FIREBASE СЮДИ !!!
+        // !!! КОНФІГУРАЦІЙНІ ДАНІ FIREBASE !!!
         // --------------------------------------------------------
         const firebaseConfig = {
-            apiKey: "ВСТАВТЕ_ВАШ_API_KEY",
-            authDomain: "ВСТАВТЕ_ВАШ_AUTH_DOMAIN",
-            databaseURL: "ВСТАВТЕ_ВАШ_DATABASE_URL",
-            projectId: "ВСТАВТЕ_ВАШ_PROJECT_ID",
-            storageBucket: "ВСТАВТЕ_ВАШ_STORAGE_BUCKET",
-            messagingSenderId: "ВСТАВТЕ_ВАШ_MESSAGING_SENDER_ID",
-            appId: "ВСТАВТЕ_ВАШ_APP_ID"
+            apiKey: "AIzaSyCJp0gKk0gPIDclIIc5rgnH9LGo5G6_768",
+            authDomain: "pupka-game.firebaseapp.com",
+            databaseURL: "https://pupka-game-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "pupka-game",
+            storageBucket: "pupka-game.firebasestorage.app", 
+            messagingSenderId: "672252683379",
+            appId: "1:672252683379:web:af9a12a470509805517606"
         };
-        // Унікальний ID для цієї конкретної Пупки (спільний для всіх користувачів)
-        const PUPKA_ID = "GLOBAL_PUPKA_TRACKER";
+        // Унікальний ID для цієї конкретної Пупки (спільний для всіх користувачів, не змінюйте його)
+        const PUPKA_ID = "GLOBAL_PUPKA_TRACKER"; 
         // --------------------------------------------------------
 
 
@@ -343,7 +379,6 @@
         }
 
         function showStatusMessage(type, text) {
-            // ... (функція showStatusMessage залишається без змін)
             if (statusMessageTimer) clearTimeout(statusMessageTimer);
 
             dom.statusAlertText.textContent = text;
@@ -577,9 +612,16 @@
             xp = data.xp || 0;
             health = data.health !== undefined && data.health !== null ? data.health : MAX_HEALTH;
             characterBase64 = data.characterBase64 || '';
-            // Перетворення об'єкта Firebase на масив історії (якщо він є)
-            history = data.history ? Object.values(data.history).sort((a, b) => b.timestamp - a.timestamp) : [];
-            history = history.slice(0, 10); // Обмеження до 10 записів
+            
+            // Отримуємо історію як масив, додаємо ключ Firebase як ID та сортуємо
+            history = [];
+            if (data.history) {
+                history = Object.keys(data.history).map(key => ({
+                    ...data.history[key],
+                    id: key // Використовуємо ключ Firebase як ID дії
+                })).sort((a, b) => b.timestamp - a.timestamp).slice(0, 10);
+            }
+            
             lastActionId = data.lastActionId || null;
             isDead = (health <= 0);
 
@@ -660,28 +702,10 @@
                 
                 if (!data || !data.history) throw new Error("No data or history found.");
                 
-                // Знаходимо ID історії в об'єкті історії Firebase
-                let historyKeyToUndo = null;
-                let entryToUndo = null;
+                // Знаходимо запис, який потрібно скасувати, використовуючи lastActionId
+                const entryToUndo = data.history[lastActionId];
                 
-                for (const key in data.history) {
-                    if (data.history[key].details?.description === history.find(item => item.id === lastActionId)?.details?.description) {
-                         // Це груба перевірка, яка працюватиме, якщо ID згенерував Firebase.
-                         // Але для надійності треба було б зберігати key Firebase в lastActionId.
-                         // Оскільки history тепер має структуру масиву, знайдемо по опису (або першій 10-ці).
-                         // Для простоти, припускаємо, що останній запис у history (який є масивом) відповідає останній дії.
-                         // У Firebase-стилі, ми знайдемо його key.
-                         
-                         // Знаходимо ключ Firebase, який відповідає останній дії в нашому локальному масиві історії
-                         if (history[0] && data.history[key].timestamp === history[0].timestamp) {
-                            historyKeyToUndo = key;
-                            entryToUndo = data.history[key];
-                            break;
-                         }
-                    }
-                }
-                
-                if (!entryToUndo || !historyKeyToUndo) {
+                if (!entryToUndo) {
                     showStatusMessage('error', 'Помилка: запис історії для відміни не знайдено в хмарі.');
                     lastActionId = null;
                     await dbRef.update({ lastActionId: null });
@@ -694,9 +718,13 @@
                 const undoneXpChange = details.xpChange ? -details.xpChange : 0;
                 let undoneHealthChange = 0;
                 
+                // Скасування зміни здоров'я: якщо це число, то змінюємо знак.
                 if (typeof details.healthChange === 'number') {
                     undoneHealthChange = -details.healthChange;
                 } else if (details.healthChange === 'SET_TO_ONE') {
+                    // Якщо це було CPR, ми не можемо просто скасувати його назад, оскільки 
+                    // ми не знаємо, скільки здоров'я було до CPR (0 або від'ємне). 
+                    // Тому запобігаємо відміні цієї дії.
                     showStatusMessage('error', 'Відміна «Штучного дихання» (CPR) не підтримується.');
                     setIsSaving(false);
                     return;
@@ -707,7 +735,7 @@
                 const newHealth = Math.min(MAX_HEALTH, Math.max(0, health + undoneHealthChange));
                 
                 // 1. Видалення запису з історії
-                await dbRef.child('history').child(historyKeyToUndo).remove();
+                await dbRef.child('history').child(lastActionId).remove();
                 
                 // 2. Оновлення основного стану та lastActionId
                 const updates = {
@@ -746,6 +774,41 @@
                 showImageInput = false;
             }
         };
+        
+        // Функція для перетворення файлу в Base64 (для зображення)
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        async function handlePaste(event) {
+            event.preventDefault();
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            
+            for (let item of items) {
+                if (item.type.indexOf("image") !== -1) {
+                    const blob = item.getAsFile();
+                    if (blob) {
+                        try {
+                            dom.pastePrompt.textContent = 'Обробка зображення...';
+                            const base64 = await fileToBase64(blob);
+                            await handleSaveBase64(base64);
+                        } catch (e) {
+                            console.error("Помилка обробки зображення:", e);
+                            showStatusMessage('error', 'Не вдалося обробити зображення.');
+                            dom.pastePrompt.textContent = 'Натисніть тут і вставте (Ctrl+V)';
+                        }
+                    }
+                    return;
+                }
+            }
+            showStatusMessage('warning', 'Нічого схожого на зображення не знайдено.');
+            dom.pastePrompt.textContent = 'Натисніть тут і вставте (Ctrl+V)';
+        }
 
         async function handleResetCharacter() {
             if (isSaving || !dbRef) return;
@@ -786,7 +849,7 @@
             }
         };
 
-        // --- ЛОГІКА XP (Оновлено для використання updateGameState) ---
+        // --- ЛОГІКА XP ---
 
         const handleXPUpdate = () => {
             if (isDead) {
@@ -814,7 +877,7 @@
             // Скидання стану UI після запиту на оновлення
             selectedActivities = [];
             hasMultiplier = false;
-            renderXpInputSection(); // Рендеримо локально, щоб UI не чекав синхронізації
+            renderXpInputSection(); 
         };
 
         const toggleActivity = (id) => {
@@ -828,7 +891,7 @@
             renderXpInputSection(); 
         };
 
-        // --- ЛОГІКА ЗДОРОВ'Я (Оновлено для використання updateGameState) ---
+        // --- ЛОГІКА ЗДОРОВ'Я ---
 
         const handleHealthChange = (healthChange, xpChange, actionName, type) => {
             if (isDead && healthChange <= 0) { 
@@ -840,10 +903,10 @@
                 return;
             }
             
-            updateGameState(xpChange, healthChange, `${actionName}: ${healthChange > 0 ? '+' : ''}${healthChange} ❤️${xpChange !== 0 ? `, ${xpChange > 0 ? '+' : ''}${xpChange} XP` : ''}`, type);
+            updateGameState(healthChange, xpChange, `${actionName}: ${healthChange > 0 ? '+' : ''}${healthChange} ❤️${xpChange !== 0 ? `, ${xpChange > 0 ? '+' : ''}${xpChange} XP` : ''}`, type);
             showHealOptions = false;
             showPenaltyOptions = false;
-            renderActionButtons(); // Рендеримо локально, щоб UI не чекав синхронізації
+            renderActionButtons(); 
         };
 
         const handleCPR = () => {
@@ -851,19 +914,13 @@
             updateGameState(0, 'SET_TO_ONE', 'Опція «Штучне дихання» (42 км за 2 дні) виконана. Пупка ожила, але виснажена.', 'heal');
         };
 
-        // ... (handlePaste та fileToBase64 залишаються без змін)
-
         // --- ІНІЦІАЛІЗАЦІЯ FIREBASE ---
 
         function initFirebase() {
-            if (typeof firebase === 'undefined' || !firebaseConfig.apiKey) {
-                showStatusMessage('error', 'Firebase не налаштовано! Вставте ваші ключі в код.');
-                if (dom.loader) dom.loader.style.display = 'none';
-                return;
-            }
             
             try {
                 // Ініціалізація програми
+                // Тут використовується стара (v8) ініціалізація через глобальний об'єкт `firebase`
                 firebase.initializeApp(firebaseConfig);
                 
                 // Посилання на єдиний об'єкт Пупки в базі даних
@@ -885,14 +942,62 @@
 
             } catch (e) {
                  console.error("Firebase Init Failed:", e);
-                 showStatusMessage('error', 'Помилка ініціалізації Firebase.');
+                 showStatusMessage('error', 'Помилка ініціалізації Firebase. Перевірте, чи коректні ключі.');
             }
         }
 
         // --- ГОЛОВНА ФУНКЦІЯ (ЗАПУСК) ---
+        function initUI() {
+            // Event Handlers for XP
+            dom.addXpBtn.onclick = handleXPUpdate;
+            dom.undoBtn.onclick = handleUndoLastAction;
+            dom.multiplierCheckbox.onchange = (e) => { 
+                hasMultiplier = e.target.checked; 
+                renderXpInputSection();
+            };
+
+            // Event Handlers for Health
+            dom.cprBtn.onclick = handleCPR;
+            dom.showHealBtn.onclick = () => { showHealOptions = !showHealOptions; showPenaltyOptions = false; renderActionButtons(); };
+            dom.showPenaltyBtn.onclick = () => { showPenaltyOptions = !showPenaltyOptions; showHealOptions = false; renderActionButtons(); };
+            dom.closeHealBtn.onclick = () => { showHealOptions = false; renderActionButtons(); };
+            dom.closePenaltyBtn.onclick = () => { showPenaltyOptions = false; renderActionButtons(); };
+
+            // Event Handlers for Image/Reset
+            dom.imageContainer.onclick = () => { if (!isDead) { showImageInput = !showImageInput; toggleElement(dom.imageUploader, showImageInput); if(showImageInput) dom.pasteArea.focus(); } };
+            dom.closeImageUploader.onclick = () => { showImageInput = false; toggleElement(dom.imageUploader, false); };
+            dom.pasteArea.onpaste = handlePaste; 
+            dom.removeImageBtn.onclick = () => handleSaveBase64('');
+            dom.showResetModalBtn.onclick = () => { showResetModal = true; toggleElement(dom.resetModal, true); };
+            dom.cancelResetBtn.onclick = () => { showResetModal = false; toggleElement(dom.resetModal, false); };
+            dom.confirmResetBtn.onclick = handleResetCharacter;
+
+
+            // Заповнення статичних списків
+            // Heal Tasks
+            dom.healTasksList.innerHTML = '';
+            HEALING_TASKS.forEach(task => {
+                const button = document.createElement('button');
+                button.className = "flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-pink-500 hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed w-full";
+                button.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5 mr-2"></i> ${task.name}`;
+                button.onclick = () => handleHealthChange(1, 0, `Лікування: ${task.name}`, 'heal');
+                dom.healTasksList.appendChild(button);
+            });
+
+            // Penalty Tasks
+            dom.penaltyTasksList.innerHTML = '';
+            PENALTIES.forEach(penalty => {
+                const button = document.createElement('button');
+                button.className = "flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full";
+                button.innerHTML = `<i data-lucide="x-circle" class="w-5 h-5 mr-2"></i> ${penalty.name} (${penalty.health ? penalty.health + ' ❤️' : ''} ${penalty.xp ? (penalty.xp > 0 ? '+' : '') + penalty.xp + ' XP' : ''})`;
+                button.onclick = () => handleHealthChange(penalty.health, penalty.xp, `Штраф: ${penalty.name}`, 'penalty');
+                dom.penaltyTasksList.appendChild(button);
+            });
+            runLucide();
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Отримання DOM-елементів (залишається без змін)
+            // Отримання DOM-елементів
             dom = {
                 loader: document.getElementById('loader'),
                 heartDisplay: document.getElementById('heart-display'),
@@ -939,75 +1044,10 @@
                 statusAlertText: document.getElementById('status-alert-text'),
             };
 
-            // Ініціалізація UI
-            // Прив'язка подій
-            // (Логіка handlePaste та fileToBase64 тут пропущена для стислості, але має бути в кінці файлу)
-            
-            // ... (Всі інші функції initUI та прив'язки подій тут) ...
-
-            // Встановлення обробників подій (обов'язково для роботи)
-            function initUI() {
-                // ... (заповнення статичних списків healTasksList, penaltyTasksList) ...
-                // (Для стислості в цьому прикладі, припускаємо, що ці функції викликаються коректно)
-                
-                // Event Handlers for XP
-                dom.addXpBtn.onclick = handleXPUpdate;
-                dom.undoBtn.onclick = handleUndoLastAction;
-                dom.multiplierCheckbox.onchange = (e) => { 
-                    hasMultiplier = e.target.checked; 
-                    renderXpInputSection();
-                };
-
-                // Event Handlers for Health
-                dom.cprBtn.onclick = handleCPR;
-                dom.showHealBtn.onclick = () => { showHealOptions = !showHealOptions; renderActionButtons(); };
-                dom.showPenaltyBtn.onclick = () => { showPenaltyOptions = !showPenaltyOptions; renderActionButtons(); };
-                dom.closeHealBtn.onclick = () => { showHealOptions = false; renderActionButtons(); };
-                dom.closePenaltyBtn.onclick = () => { showPenaltyOptions = false; renderActionButtons(); };
-
-                // Event Handlers for Image/Reset (також потрібні)
-                dom.imageContainer.onclick = () => { if (!isDead) { showImageInput = !showImageInput; toggleElement(dom.imageUploader, showImageInput); if(showImageInput) dom.pasteArea.focus(); } };
-                dom.closeImageUploader.onclick = () => { showImageInput = false; toggleElement(dom.imageUploader, false); };
-                dom.pasteArea.onpaste = (e) => { 
-                    // ... (викликати handlePaste, але не визначати його тут)
-                    // Для коректної роботи додайте handlePaste та fileToBase64
-                }; 
-                dom.removeImageBtn.onclick = () => handleSaveBase64('');
-                dom.showResetModalBtn.onclick = () => { showResetModal = true; toggleElement(dom.resetModal, true); };
-                dom.cancelResetBtn.onclick = () => { showResetModal = false; toggleElement(dom.resetModal, false); };
-                dom.confirmResetBtn.onclick = handleResetCharacter;
-
-
-                // Заповнення статичних списків (викликати тут, щоб вони мали кнопки з обробниками)
-                // Heal Tasks
-                dom.healTasksList.innerHTML = '';
-                HEALING_TASKS.forEach(task => {
-                    const button = document.createElement('button');
-                    button.className = "flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-pink-500 hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed w-full";
-                    button.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5 mr-2"></i> ${task.name}`;
-                    button.onclick = () => handleHealthChange(1, 0, `Лікування: ${task.name}`, 'heal');
-                    dom.healTasksList.appendChild(button);
-                });
-
-                // Penalty Tasks
-                dom.penaltyTasksList.innerHTML = '';
-                PENALTIES.forEach(penalty => {
-                    const button = document.createElement('button');
-                    button.className = "flex items-center justify-center p-3 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full";
-                    button.innerHTML = `<i data-lucide="x-circle" class="w-5 h-5 mr-2"></i> ${penalty.name} (${penalty.health ? penalty.health + ' ❤️' : ''} ${penalty.xp ? (penalty.xp > 0 ? '+' : '') + penalty.xp + ' XP' : ''})`;
-                    button.onclick = () => handleHealthChange(penalty.health, penalty.xp, `Штраф: ${penalty.name}`, 'penalty');
-                    dom.penaltyTasksList.appendChild(button);
-                });
-                runLucide();
-            }
-
             initUI();
             
-            // 3. Ініціалізація Firebase та запуск синхронізації
+            // Ініціалізація Firebase та запуск синхронізації
             initFirebase();
-            
-            // 4. Перший рендер відбудеться після отримання даних з Firebase
-            // (loader буде схований у syncStateFromFirebase)
         });
         
     </script>
